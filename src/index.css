@@ -1,0 +1,544 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design Tokens ─────────────────────────────────────────── */
+:root {
+  --sidebar-w: 256px;
+  --topbar-h: 64px;
+  --radius-card: 16px;
+  --radius-btn: 12px;
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 8px 24px -4px rgba(37,99,235,0.13), 0 4px 8px -4px rgba(37,99,235,0.07);
+  --shadow-glass: 0 4px 24px 0 rgba(30,64,175,0.07);
+  --transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 min-h-screen;
+  }
+
+  h1 { @apply text-2xl font-bold tracking-tight text-slate-900; }
+  h2 { @apply text-lg font-semibold text-slate-800; }
+  h3 { @apply text-base font-semibold text-slate-700; }
+
+  input, textarea, select { @apply outline-none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* ── Components ───────────────────────────────────────────── */
+@layer components {
+
+  /* ── Cards ─────────────────────────────────────────────── */
+  .card {
+    @apply bg-white rounded-2xl border border-slate-100 p-6;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--transition), transform var(--transition);
+  }
+  .card-hover {
+    @apply card cursor-default;
+  }
+  .card-hover:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+  .card-interactive {
+    @apply card cursor-pointer;
+  }
+  .card-interactive:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
+  }
+
+  /* ── Boutons ────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold
+           text-sm transition-all duration-150 cursor-pointer select-none
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2
+           active:scale-[0.97];
+  }
+  .btn-primary {
+    @apply btn text-white shadow-sm;
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  }
+  .btn-primary:hover { background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); }
+
+  .btn-secondary {
+    @apply btn bg-white text-brand-700 border border-brand-200 hover:bg-brand-50 shadow-sm;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-600 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700 shadow-sm;
+  }
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm;
+  }
+  .btn-sm   { @apply px-3 py-1.5 text-xs rounded-lg; }
+  .btn-lg   { @apply px-6 py-3 text-base rounded-2xl; }
+  .btn-icon { @apply btn p-2.5 rounded-xl; }
+
+  /* ── Inputs ─────────────────────────────────────────────── */
+  .input {
+    @apply w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800
+           text-sm placeholder:text-slate-400 font-medium
+           transition-all duration-150
+           focus:border-brand-400 focus:ring-2 focus:ring-brand-100;
+  }
+  .input-error {
+    @apply input border-red-400 focus:border-red-500 focus:ring-red-100;
+  }
+  .label {
+    @apply block text-sm font-semibold text-slate-600 mb-1.5;
+  }
+  .form-group { @apply flex flex-col gap-1; }
+
+  /* Select */
+  select.input {
+    @apply pr-8 bg-no-repeat appearance-none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-position: right 12px center;
+    background-size: 12px;
+  }
+
+  /* ── Badges statut ──────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide;
+  }
+  .badge-green  { @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200; }
+  .badge-amber  { @apply badge bg-amber-50   text-amber-700   ring-1 ring-amber-200; }
+  .badge-red    { @apply badge bg-red-50     text-red-700     ring-1 ring-red-200; }
+  .badge-gray   { @apply badge bg-slate-100  text-slate-500   ring-1 ring-slate-200; }
+  .badge-blue   { @apply badge bg-brand-50   text-brand-700   ring-1 ring-brand-200; }
+  .badge-purple { @apply badge bg-violet-50  text-violet-700  ring-1 ring-violet-200; }
+
+  /* ── Navigation sidebar ─────────────────────────────────── */
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-slate-400 transition-all duration-150 cursor-pointer select-none;
+  }
+  .nav-link:hover { @apply bg-white/5 text-white; }
+  .nav-link-active {
+    @apply nav-link bg-white/10 text-white;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  /* ── Table ──────────────────────────────────────────────── */
+  .table-wrapper { @apply w-full overflow-x-auto rounded-2xl border border-slate-100; }
+  .table         { @apply w-full text-sm text-left; }
+  .table th {
+    @apply px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider
+           bg-slate-50/80 border-b border-slate-100;
+  }
+  .table td {
+    @apply px-4 py-3.5 border-b border-slate-50 text-slate-700 font-medium;
+  }
+  .table tr:last-child td { @apply border-b-0; }
+  .table tbody tr { @apply hover:bg-blue-50/40 transition-colors duration-100; }
+
+  /* ── KPI / stat card ────────────────────────────────────── */
+  .kpi-card {
+    @apply card-hover relative overflow-hidden;
+  }
+  .kpi-icon-wrap {
+    @apply w-11 h-11 rounded-2xl flex items-center justify-center mb-4 shadow-sm;
+  }
+  .kpi-label  { @apply text-xs font-bold text-slate-400 uppercase tracking-widest mb-1; }
+  .kpi-value  { @apply text-2xl font-extrabold text-slate-900 leading-none; }
+  .kpi-sub    { @apply text-xs text-slate-400 mt-1.5 font-medium; }
+
+  /* ── Glass panel ────────────────────────────────────────── */
+  .glass {
+    @apply bg-white/60 backdrop-blur-md border border-white/60 rounded-2xl;
+    box-shadow: var(--shadow-glass);
+  }
+
+  /* ── Page header ────────────────────────────────────────── */
+  .page-header {
+    @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6;
+  }
+
+  /* ── Modal backdrop ─────────────────────────────────────── */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 flex items-start justify-center
+           pt-16 px-4 animate-fade-in;
+  }
+  .modal-box {
+    @apply bg-white rounded-3xl shadow-glass-lg border border-slate-100 w-full max-w-2xl
+           max-h-[85vh] overflow-y-auto animate-slide-up;
+  }
+  .modal-header {
+    @apply flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 sticky top-0 bg-white rounded-t-3xl;
+  }
+
+  /* ── Gradients branding ─────────────────────────────────── */
+  .gradient-brand   { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #1d4ed8 100%); }
+  .gradient-sidebar { background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%); }
+
+  /* ── Scrollbar ──────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-200 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-300; }
+
+  /* ── Print / PDF ────────────────────────────────────────── */
+  @media print {
+    body { @apply bg-white; }
+    .no-print  { @apply hidden; }
+    .print-only { display: block !important; }
+  }
+}
+
+/* ── Utilities ────────────────────────────────────────────── */
+@layer utilities {
+  .print-only { @apply hidden; }
+
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ring-3 { --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 3px var(--tw-ring-color); }
+
+  /* ────────────────────────────────────────────────────────── */
+  /*  PDF STYLES (inlined car pas de @page Tailwind)           */
+  /* ────────────────────────────────────────────────────────── */
+  .pdf-doc {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #1e293b;
+    font-size: 9pt;
+    line-height: 1.5;
+    max-width: 210mm;
+    padding: 12mm 14mm;
+    background: #fff;
+  }
+
+  .pdf-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 8mm;
+    padding-bottom: 6mm;
+    border-bottom: 2px solid #2563eb;
+  }
+
+  .pdf-logo {
+    max-width: 50mm;
+    max-height: 20mm;
+    object-fit: contain;
+  }
+
+  .pdf-logo-placeholder {
+    width: 18mm;
+    height: 18mm;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 14pt;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pdf-company-info {
+    text-align: right;
+    font-size: 8.5pt;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  .pdf-company-name {
+    display: block;
+    font-size: 13pt;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 1mm;
+  }
+
+  .pdf-title-section {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 7mm;
+  }
+
+  .pdf-doc-title {
+    font-size: 22pt;
+    font-weight: 900;
+    color: #1d4ed8;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  .pdf-doc-number {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #64748b;
+    margin-top: 1mm;
+  }
+
+  .pdf-doc-meta {
+    font-size: 8pt;
+    color: #475569;
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .pdf-statut-badge {
+    display: inline-block;
+    padding: 0.5mm 3mm;
+    border-radius: 20px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .pdf-statut-attente { background: #fef3c7; color: #92400e; }
+  .pdf-statut-accepte { background: #d1fae5; color: #065f46; }
+  .pdf-statut-refuse  { background: #fee2e2; color: #991b1b; }
+  .pdf-statut-payee   { background: #d1fae5; color: #065f46; }
+  .pdf-statut-retard  { background: #fee2e2; color: #991b1b; }
+
+  .pdf-addresses {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6mm;
+    margin-bottom: 7mm;
+  }
+
+  .pdf-address-block {
+    padding: 4mm;
+    background: #f8fafc;
+    border-radius: 4px;
+    border-left: 3px solid #2563eb;
+  }
+
+  .pdf-address-label {
+    font-size: 7pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #2563eb;
+    margin-bottom: 1mm;
+  }
+
+  .pdf-address-name {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1mm;
+  }
+
+  .pdf-address-detail {
+    font-size: 8pt;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  .pdf-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5mm;
+    font-size: 8.5pt;
+  }
+
+  .pdf-table thead tr {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: #fff;
+  }
+
+  .pdf-table th {
+    padding: 2.5mm 3mm;
+    font-weight: 700;
+    font-size: 7.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .pdf-table tbody tr:nth-child(even) { background: #f8fafc; }
+
+  .pdf-table td {
+    padding: 2.5mm 3mm;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+    color: #334155;
+  }
+
+  .pdf-no-break { page-break-inside: avoid; }
+
+  .desc-main   { font-weight: 600; color: #1e293b; }
+  .desc-detail { font-size: 7.5pt; color: #64748b; margin-top: 0.5mm; }
+
+  .pdf-totals {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 6mm;
+  }
+
+  .pdf-totals-table {
+    width: 65mm;
+    font-size: 8.5pt;
+  }
+
+  .pdf-totals-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.5mm 0;
+    border-bottom: 1px solid #e2e8f0;
+    color: #475569;
+  }
+
+  .pdf-totals-row.total {
+    font-size: 11pt;
+    font-weight: 800;
+    color: #1e293b;
+    border-bottom: none;
+    padding-top: 2.5mm;
+    border-top: 2px solid #2563eb;
+  }
+
+  .pdf-tva-mention {
+    font-size: 7pt;
+    color: #94a3b8;
+    margin-top: 1.5mm;
+    font-style: italic;
+  }
+
+  .pdf-notes {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 3.5mm;
+    font-size: 8pt;
+    color: #475569;
+    margin-bottom: 5mm;
+  }
+
+  .pdf-notes-label {
+    font-size: 7.5pt;
+    font-weight: 800;
+    color: #1d4ed8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1.5mm;
+  }
+
+  .pdf-signature-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm;
+    margin-bottom: 6mm;
+  }
+
+  .pdf-acceptance-box {
+    padding: 3.5mm;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 4px;
+    font-size: 8pt;
+    color: #475569;
+  }
+
+  .box-title {
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 2mm;
+  }
+
+  .pdf-acceptance-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 2mm;
+    font-size: 7.5pt;
+    color: #475569;
+  }
+
+  .pdf-checkbox-square {
+    width: 4mm;
+    height: 4mm;
+    border: 1px solid #94a3b8;
+    flex-shrink: 0;
+    margin-top: 0.5mm;
+  }
+
+  .pdf-signature-block {
+    padding: 3.5mm;
+    background: #f8fafc;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .pdf-signature-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2mm;
+  }
+
+  .pdf-signature-img     { max-height: 15mm; object-fit: contain; }
+  .pdf-signature-placeholder {
+    height: 15mm;
+    border-bottom: 1px solid #cbd5e1;
+    margin: 0 4mm 1mm;
+  }
+
+  .pdf-google-reviews {
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    padding: 3mm 4mm;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 4px;
+    margin-bottom: 3mm;
+    font-size: 8pt;
+  }
+
+  .pdf-google-logo {
+    font-size: 10pt;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .pdf-google-logo span:nth-child(1) { color: #4285F4; }
+  .pdf-google-logo span:nth-child(2) { color: #EA4335; }
+  .pdf-google-logo span:nth-child(3) { color: #FBBC05; }
+  .pdf-google-logo span:nth-child(4) { color: #4285F4; }
+  .pdf-google-logo span:nth-child(5) { color: #34A853; }
+  .pdf-google-logo span:nth-child(6) { color: #EA4335; }
+
+  .pdf-stars    { color: #f59e0b; font-size: 9pt; letter-spacing: 1px; }
+  .pdf-google-text { font-size: 7.5pt; color: #92400e; }
+  .pdf-google-cta  { font-size: 7pt; color: #1d4ed8; font-weight: 600; }
+
+  .pdf-footer { border-top: 1px solid #e2e8f0; padding-top: 3mm; }
+
+  .pdf-legal {
+    font-size: 7pt;
+    color: #94a3b8;
+    line-height: 1.6;
+    text-align: center;
+  }
+}
