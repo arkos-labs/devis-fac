@@ -24,6 +24,8 @@ export const DEMO_PARAMETRES: ParametresCompte = {
   avis_google_url: 'https://g.page/r/cleanpro-paris',
   note_google: 4.9,
   nombre_avis_google: 47,
+  afficher_avis_sur_devis: true,
+  afficher_avis_sur_factures: true,
   prochain_num_devis: 9,
   prochain_num_facture: 7,
   created_at: '2024-01-01T00:00:00Z',
