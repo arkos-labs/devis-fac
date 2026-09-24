@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { isSupabaseConfigured } from '@/lib/supabase'
 import {
@@ -303,6 +303,9 @@ export default function LoginPage() {
               </div>
 
               <p className="text-xs text-center text-slate-400 mt-5 font-medium">
+                Pas encore de compte ? <Link to="/signup" className="text-brand-600 font-semibold hover:text-brand-800">Créer un compte</Link>
+              </p>
+              <p className="text-xs text-center text-slate-400 mt-3 font-medium">
                 SIRET : 99039012200028 — Auto-entrepreneur
               </p>
             </div>

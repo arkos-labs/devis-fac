@@ -43,7 +43,7 @@ function KpiCard({
           <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
         </span>
       )}
-      <div className={cn('absolute right-0 top-0 w-24 h-24 rounded-bl-3xl opacity-8 group-hover:opacity-12 transition-opacity', gradient)} />
+
       <div className={cn('kpi-icon-wrap text-white shadow-sm', gradient)}>
         <Icon size={20} />
       </div>
@@ -777,8 +777,7 @@ export default function DashboardPage() {
         </button>
       )}
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {KPI_CARDS.map(card => <KpiCard key={card.label} {...card} />)}
       </div>
 

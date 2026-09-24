@@ -22,6 +22,7 @@ interface AuthContextType {
   loading: boolean
   isDemo: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string) => Promise<{ error: Error | null; user: User | null }>
   signInDev: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
 }
@@ -58,6 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
+  const signUp = async (email: string, password: string) => {
+    if (IS_DEMO) return { error: null, user: null }
+    const { error, data } = await supabase.auth.signUp({ email, password })
+    return { error, user: data?.user ?? null }
+  }
+
   const signInDev = async () => {
     if (!import.meta.env.DEV) return { error: new Error('Disponible uniquement en développement') as Error }
     const { error } = await supabase.auth.signInAnonymously()
@@ -70,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isDemo: IS_DEMO, signIn, signInDev, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isDemo: IS_DEMO, signIn, signUp, signInDev, signOut }}>
       {children}
     </AuthContext.Provider>
   )

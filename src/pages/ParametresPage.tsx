@@ -565,7 +565,7 @@ export default function ParametresPage() {
           <h3 className="font-semibold text-brand-800 mb-3 flex items-center gap-2">
             <FileText size={16} /> Numérotation actuelle
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-slate-500 mb-1">Prochain numéro de devis</p>
               <p className="font-bold text-brand-700 text-lg">D-{String(params.prochain_num_devis).padStart(4, '0')}</p>

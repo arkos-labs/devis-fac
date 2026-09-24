@@ -181,7 +181,7 @@ export default function FacturesPage() {
       </div>
 
       {/* ── Résumé financier ────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="card border-l-4 border-l-amber-400">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1 flex items-center gap-1">
             <Clock size={12} /> À encaisser

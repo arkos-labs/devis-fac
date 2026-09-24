@@ -236,7 +236,7 @@ export default function ClientsPage() {
                 <input required className="input" placeholder="Marie Dupont"
                   value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="form-group">
                   <label className="label">Email</label>
                   <input type="email" className="input" placeholder="marie@exemple.fr"
@@ -253,7 +253,7 @@ export default function ClientsPage() {
                 <input className="input" placeholder="12 rue de la Paix"
                   value={form.adresse} onChange={e => setForm(f => ({ ...f, adresse: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="form-group">
                   <label className="label">Ville</label>
                   <input className="input" placeholder="Paris"
