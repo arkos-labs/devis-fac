@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   BarChart2, BookUser, ScrollText, BadgeEuro,
-  SlidersHorizontal, LogOut, Zap, X, ChevronRight
+  SlidersHorizontal, LogOut, Zap, X
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'

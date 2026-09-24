@@ -193,7 +193,7 @@ export default function SignupPage() {
             setLoading(false)
             return
           }
-          userId = user?.id
+          userId = user?.id ?? null
         }
 
         if (!userId) throw new Error('Impossible de récupérer l\'ID utilisateur')
