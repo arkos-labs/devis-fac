@@ -22,6 +22,8 @@ export interface ParametresCompte {
   avis_google_url: string | null
   note_google: number
   nombre_avis_google: number
+  afficher_avis_sur_devis: boolean
+  afficher_avis_sur_factures: boolean
   prochain_num_devis: number
   prochain_num_facture: number
   created_at: string

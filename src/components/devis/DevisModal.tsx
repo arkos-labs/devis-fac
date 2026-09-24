@@ -289,7 +289,7 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
           <div className="space-y-3">
             <label className="label">Prestations *</label>
 
-            {rows.map((row, ri) => {
+            {rows.map((row) => {
               const upsells = row.catalogueId ? upsellsOf(row.catalogueId) : []
 
               return (

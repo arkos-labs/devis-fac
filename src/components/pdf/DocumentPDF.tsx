@@ -15,13 +15,6 @@ interface DocumentPDFProps {
 }
 
 // ── Helpers ───────────────────────────────────────────────────
-function isDevis(doc: Document): doc is Devis {
-  return 'genere_par_ia' in doc
-}
-
-function isFacture(doc: Document): doc is Facture {
-  return 'date_paiement' in doc
-}
 
 function getStatutLabel(doc: Document, type: 'devis' | 'facture'): { label: string; cls: string } {
   if (type === 'devis') {
@@ -265,27 +258,29 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
       {/* ── FOOTER ───────────────────────────────────────────── */}
       <div className="pdf-footer">
 
-        {/* Encart Avis Google */}
-        <div className="pdf-google-reviews">
-          <div className="pdf-google-logo" aria-label="Google">
-            <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
-          </div>
-          <div style={{ borderLeft: '1px solid #fde68a', height: '8mm', margin: '0 1mm' }} />
-          <div>
-            <div className="pdf-stars">{renderStars(parametres.note_google ?? 5)}</div>
-            <div className="pdf-google-text">
-              <strong>{parametres.note_google ?? '5.0'}/5</strong> · {parametres.nombre_avis_google ?? 0} avis clients
+        {/* Encart Avis Google — affichage conditionnel */}
+        {(type === 'devis' ? parametres.afficher_avis_sur_devis : parametres.afficher_avis_sur_factures) && (
+          <div className="pdf-google-reviews">
+            <div className="pdf-google-logo" aria-label="Google">
+              <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
+            </div>
+            <div style={{ borderLeft: '1px solid #fde68a', height: '8mm', margin: '0 1mm' }} />
+            <div>
+              <div className="pdf-stars">{renderStars(parametres.note_google ?? 5)}</div>
+              <div className="pdf-google-text">
+                <strong>{parametres.note_google ?? '5.0'}/5</strong> · {parametres.nombre_avis_google ?? 0} avis clients
+              </div>
+            </div>
+            <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+              <div style={{ fontSize: '7.5pt', color: '#78350f', marginBottom: '1mm' }}>
+                Vous êtes satisfait(e) ? Laissez-nous un avis !
+              </div>
+              {parametres.avis_google_url && (
+                <div className="pdf-google-cta">{parametres.avis_google_url}</div>
+              )}
             </div>
           </div>
-          <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-            <div style={{ fontSize: '7.5pt', color: '#78350f', marginBottom: '1mm' }}>
-              Vous êtes satisfait(e) ? Laissez-nous un avis !
-            </div>
-            {parametres.avis_google_url && (
-              <div className="pdf-google-cta">{parametres.avis_google_url}</div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Mentions légales */}
         <div className="pdf-legal">

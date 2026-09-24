@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from './types/database'
 
 const supabaseUrl     = import.meta.env.VITE_SUPABASE_URL     as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -15,7 +14,7 @@ export const isSupabaseConfigured =
 
 // Client Supabase — utilise des valeurs de fallback si non configuré
 // (la connexion échouera gracieusement, affichant le guide de setup)
-export const supabase = createClient<Database>(
+export const supabase = createClient(
   isSupabaseConfigured ? supabaseUrl! : 'https://placeholder.supabase.co',
   isSupabaseConfigured ? supabaseAnonKey! : 'placeholder-key',
   {
