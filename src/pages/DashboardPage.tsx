@@ -21,7 +21,6 @@ import toast from 'react-hot-toast'
 
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
-/* ── KPI Card ──────────────────────────────────────────────── */
 function KpiCard({
   label, value, sub, gradient, icon: Icon, onClick, pulse
 }: {
@@ -29,33 +28,46 @@ function KpiCard({
   gradient: string; icon: React.ElementType
   onClick?: () => void; pulse?: boolean
 }) {
+  // Extract a base color from the gradient class to style the icon wrapper
+  let iconColorClass = 'text-blue-600 bg-blue-50';
+  if (gradient.includes('green')) iconColorClass = 'text-emerald-600 bg-emerald-50';
+  if (gradient.includes('amber')) iconColorClass = 'text-amber-600 bg-amber-50';
+  if (gradient.includes('purple')) iconColorClass = 'text-violet-600 bg-violet-50';
+  if (gradient.includes('red')) iconColorClass = 'text-red-600 bg-red-50';
+
   return (
     <div
       className={cn(
-        'kpi-card group relative',
-        onClick && 'cursor-pointer hover:ring-2 hover:ring-offset-2 hover:ring-brand-200'
+        'bg-white border border-slate-100 rounded-xl p-6 relative group transition-all duration-200 shadow-sm hover:shadow-md',
+        onClick && 'cursor-pointer hover:border-brand-200'
       )}
       onClick={onClick}
     >
       {pulse && (
-        <span className="absolute top-3 right-3 flex h-2.5 w-2.5">
+        <span className="absolute top-4 right-4 flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
         </span>
       )}
-
-      <div className={cn('kpi-icon-wrap text-white shadow-sm', gradient)}>
-        <Icon size={20} />
+      
+      {/* Small Icon Wrapper */}
+      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-5', iconColorClass)}>
+        <Icon size={18} strokeWidth={2.5} />
       </div>
-      <p className="kpi-label">{label}</p>
-      <p className="kpi-value">{value}</p>
-      {sub && <p className="kpi-sub">{sub}</p>}
+
+      <div className="space-y-1">
+        <p className="text-[13px] font-medium text-slate-500">{label}</p>
+        <div className="flex items-end gap-3">
+          <p className="text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
+          {sub && <p className="text-[11px] font-medium text-slate-400 mb-1">{sub}</p>}
+        </div>
+      </div>
+
       {onClick && (
-        <div className="absolute bottom-3 right-4 flex items-center gap-1 text-[10px] font-bold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
-          Détails <ChevronRight size={10} />
+        <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ArrowUpRight size={16} className="text-slate-300" />
         </div>
       )}
-      <div className={cn('absolute bottom-0 left-0 right-0 h-0.5 rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-200', gradient)} />
     </div>
   )
 }

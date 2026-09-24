@@ -28,7 +28,7 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-800 min-h-screen;
+    @apply bg-white text-slate-800 min-h-screen;
   }
 
   h1 { @apply text-2xl font-bold tracking-tight text-slate-900; }
@@ -146,13 +146,13 @@
   .table         { @apply w-full text-sm text-left; }
   .table th {
     @apply px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider
-           bg-slate-50/80 border-b border-slate-100;
+           bg-white border-b border-slate-100;
   }
   .table td {
-    @apply px-4 py-3.5 border-b border-slate-50 text-slate-700 font-medium;
+    @apply px-4 py-3.5 border-b border-slate-100 text-slate-700 font-medium;
   }
   .table tr:last-child td { @apply border-b-0; }
-  .table tbody tr { @apply hover:bg-blue-50/40 transition-colors duration-100; }
+  .table tbody tr { @apply hover:bg-slate-50 transition-colors duration-100; }
 
   /* ── KPI / stat card ────────────────────────────────────── */
   .kpi-card {
