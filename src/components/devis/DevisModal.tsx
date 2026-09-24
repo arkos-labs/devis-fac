@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros } from '@/lib/utils'
@@ -17,6 +17,12 @@ export interface LigneForm {
   prix_unitaire: number; ordre: number
   is_upsell?: boolean
 }
+
+export interface ClientForm {
+  nom: string; email: string; telephone: string;
+  adresse: string; ville: string; code_postal: string;
+}
+const INITIAL_CLIENT: ClientForm = { nom: '', email: '', telephone: '', adresse: '', ville: '', code_postal: '' }
 
 export interface DevisFormData {
   client_id: string; date_validite: string
@@ -65,6 +71,35 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
   const [showIA, setShowIA] = useState(false)
   const [promptIA, setPromptIA] = useState('')
   const [iaLoading, setIALoading] = useState(false)
+
+  const qc = useQueryClient()
+  const [showNewClient, setShowNewClient] = useState(false)
+  const [newClientForm, setNewClientForm] = useState<ClientForm>(INITIAL_CLIENT)
+
+  const createClient = useMutation({
+    mutationFn: async (clientData: ClientForm) => {
+      const { data, error } = await supabase.from('clients').insert({
+        user_id: user!.id,
+        ...clientData,
+        statut: 'prospect'
+      }).select('id, nom').single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      setForm(f => ({ ...f, client_id: data.id }))
+      setShowNewClient(false)
+      setNewClientForm(INITIAL_CLIENT)
+      toast.success('Client créé avec succès')
+    },
+    onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
+  })
+
+  const handleCreateClient = () => {
+    if (!newClientForm.nom.trim()) return toast.error('Entrez un nom de client')
+    createClient.mutate(newClientForm)
+  }
 
   // ── Data ─────────────────────────────────────────────────────
   const { data: clients = [] } = useQuery<Client[]>({
@@ -265,18 +300,80 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
           )}
 
           {/* ── Client + Date ────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="form-group">
-              <label className="label">Client *</label>
-              <div className="relative">
-                <select required value={form.client_id}
-                  onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
-                  className="input appearance-none pr-8">
-                  <option value="">Sélectionner…</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                </select>
-                <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="form-group sm:col-span-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="label !mb-0">Client *</label>
+                {!showNewClient && (
+                  <button type="button" onClick={() => setShowNewClient(true)}
+                    className="text-[11px] font-bold text-brand-600 hover:text-brand-700">
+                    + Nouveau client
+                  </button>
+                )}
               </div>
+              
+              {showNewClient ? (
+                <div className="p-4 rounded-xl border border-brand-100 bg-brand-50/30 space-y-3 relative">
+                  <button onClick={() => setShowNewClient(false)} type="button" className="absolute top-3 right-3 text-slate-400 hover:text-slate-700">
+                    <X size={16} />
+                  </button>
+                  <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">Nouveau client</p>
+                  
+                  <div className="form-group">
+                    <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Nom complet *</label>
+                    <input autoFocus value={newClientForm.nom} onChange={e => setNewClientForm(f => ({ ...f, nom: e.target.value }))}
+                           placeholder="Marie Dupont" className="input text-sm py-2" />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="form-group">
+                      <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Email</label>
+                      <input type="email" value={newClientForm.email} onChange={e => setNewClientForm(f => ({ ...f, email: e.target.value }))}
+                             placeholder="marie@exemple.fr" className="input text-sm py-2" />
+                    </div>
+                    <div className="form-group">
+                      <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Téléphone</label>
+                      <input value={newClientForm.telephone} onChange={e => setNewClientForm(f => ({ ...f, telephone: e.target.value }))}
+                             placeholder="06 12 34 56 78" className="input text-sm py-2" />
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Adresse</label>
+                    <input value={newClientForm.adresse} onChange={e => setNewClientForm(f => ({ ...f, adresse: e.target.value }))}
+                           placeholder="12 rue de la Paix" className="input text-sm py-2" />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="form-group">
+                      <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Ville</label>
+                      <input value={newClientForm.ville} onChange={e => setNewClientForm(f => ({ ...f, ville: e.target.value }))}
+                             placeholder="Paris" className="input text-sm py-2" />
+                    </div>
+                    <div className="form-group">
+                      <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Code postal</label>
+                      <input value={newClientForm.code_postal} onChange={e => setNewClientForm(f => ({ ...f, code_postal: e.target.value }))}
+                             placeholder="75001" className="input text-sm py-2" />
+                    </div>
+                  </div>
+
+                  <div className="pt-1 text-right">
+                    <button onClick={handleCreateClient} disabled={createClient.isPending} type="button" className="btn-primary btn-sm px-4">
+                      {createClient.isPending ? 'Création…' : 'Créer le client'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <select required value={form.client_id}
+                    onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
+                    className="input appearance-none pr-8">
+                    <option value="">Sélectionner…</option>
+                    {clients.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  </select>
+                  <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              )}
             </div>
             <div className="form-group">
               <label className="label">Validité</label>
