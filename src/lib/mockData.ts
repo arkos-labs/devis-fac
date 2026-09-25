@@ -116,7 +116,7 @@ export const DEMO_LIGNES: LignePrestation[] = [
 ]
 
 // ── Devis ─────────────────────────────────────────────────────
-export const DEMO_DEVIS: Devis[] = [
+export const DEMO_DEVIS = [
   {
     id: 'devis-001', user_id: DEMO_USER_ID, client_id: 'client-001',
     numero: 'D-0001', statut: 'accepte',
@@ -198,10 +198,10 @@ export const DEMO_DEVIS: Devis[] = [
     created_at: '2026-09-22T11:00:00Z', updated_at: '2026-09-22T11:00:00Z',
     clients: DEMO_CLIENTS[1],
   },
-]
+] as Devis[]
 
 // ── Factures ──────────────────────────────────────────────────
-export const DEMO_FACTURES: Facture[] = [
+export const DEMO_FACTURES = [
   {
     id: 'facture-001', user_id: DEMO_USER_ID, client_id: 'client-001', devis_id: 'devis-001',
     numero: 'F-0001', statut: 'payee',
@@ -269,7 +269,7 @@ export const DEMO_FACTURES: Facture[] = [
     created_at: '2026-08-15T10:00:00Z', updated_at: '2026-09-20T09:00:00Z',
     clients: DEMO_CLIENTS[5],
   },
-]
+] as Facture[]
 
 // ── Stats Dashboard ───────────────────────────────────────────
 export const DEMO_STATS: DashboardStats = {
