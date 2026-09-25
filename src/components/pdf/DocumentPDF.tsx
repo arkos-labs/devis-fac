@@ -1,5 +1,6 @@
 import type { Devis, Facture, LignePrestation, ParametresCompte, Client } from '@/types/database'
 import { formatEuros, formatDateLong } from '@/lib/utils'
+import { getClientDisplayName, getClientLegalNotices } from '@/lib/clientHelpers'
 
 // ── Types union ───────────────────────────────────────────────
 type Document = (Devis | Facture) & {
@@ -127,11 +128,14 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
         {/* Client */}
         <div className="pdf-address-block">
           <div className="pdf-address-label">Client</div>
-          <div className="pdf-address-name">{client?.nom ?? '—'}</div>
+          <div className="pdf-address-name">{getClientDisplayName(client)}</div>
           <div className="pdf-address-detail">
             {client?.adresse && <>{client.adresse}<br /></>}
             {(client?.code_postal || client?.ville) && (
               <>{[client.code_postal, client.ville].filter(Boolean).join(' ')}<br /></>
+            )}
+            {client?.type === 'professionnel' && client?.siren && (
+              <>SIREN : {client.siren}{client.vat_number ? <> — TVA : {client.vat_number}</> : ''}<br /></>
             )}
             {client?.telephone && <>Tél : {client.telephone}<br /></>}
             {client?.email && <>{client.email}</>}
@@ -243,14 +247,25 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
         <div className="pdf-notes pdf-no-break" style={{ background: '#f0fdf4', borderColor: '#16a34a' }}>
           <div className="pdf-notes-label" style={{ color: '#15803d' }}>Conditions de règlement</div>
           <div style={{ color: '#166534', fontSize: '8pt', lineHeight: '1.5' }}>
-            Règlement par virement bancaire ou chèque à l'ordre de <strong>{parametres.nom_entreprise}</strong>.{' '}
-            {(document as Facture).date_echeance && (
-              <>Date d'échéance : <strong>{new Date((document as Facture).date_echeance!).toLocaleDateString('fr-FR')}</strong>. </>
+            {client?.type === 'professionnel' ? (
+              <>
+                Règlement par virement bancaire ou chèque à l'ordre de <strong>{parametres.nom_entreprise}</strong>.{' '}
+                {(document as Facture).date_echeance && (
+                  <>Date d'échéance : <strong>{new Date((document as Facture).date_echeance!).toLocaleDateString('fr-FR')}</strong>. </>
+                )}
+                <br />
+                En cas de retard de paiement, une pénalité de <strong>3 fois le taux d'intérêt légal</strong> sera appliquée,
+                ainsi qu'une indemnité forfaitaire de recouvrement de <strong>40 €</strong> (art. L441-10 du Code de commerce).
+                Aucun escompte pour paiement anticipé.
+              </>
+            ) : (
+              <>
+                Règlement par virement bancaire ou chèque à l'ordre de <strong>{parametres.nom_entreprise}</strong>.{' '}
+                {(document as Facture).date_echeance && (
+                  <>Date d'échéance : <strong>{new Date((document as Facture).date_echeance!).toLocaleDateString('fr-FR')}</strong>.</>
+                )}
+              </>
             )}
-            <br />
-            En cas de retard de paiement, une pénalité de <strong>3 fois le taux d'intérêt légal</strong> sera appliquée,
-            ainsi qu'une indemnité forfaitaire de recouvrement de <strong>40 €</strong> (art. L441-10 du Code de commerce).
-            Aucun escompte pour paiement anticipé.
           </div>
         </div>
       )}
@@ -286,6 +301,14 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
         <div className="pdf-legal">
           <strong>{parametres.nom_entreprise}</strong> — SIRET : {parametres.siret}<br />
           {parametres.mentions_legales}
+          {client?.type === 'particulier' && (
+            <>
+              <br />
+              <span style={{ fontSize: '7pt', color: '#475569', fontStyle: 'italic' }}>
+                {getClientLegalNotices(client)}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
