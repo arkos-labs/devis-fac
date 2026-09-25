@@ -89,12 +89,13 @@ export function validateLuhnSiren(siren: string): boolean {
 
 export function validateClientForm(form: Partial<ClientFormData>): ValidationError[] {
   const errors: ValidationError[] = []
-  const type = form.type as ClientType | undefined
 
-  if (!type) {
+  if (!form.type) {
     errors.push({ field: 'type', message: 'Le type de client est obligatoire' })
     return errors // Arrêter si pas de type
   }
+
+  const type = form.type as ClientType
 
   // ──── CHAMPS COMMUNS ────────────────────────────────────────
   if (!form.adresse || form.adresse.trim() === '') {
@@ -177,7 +178,7 @@ export function getClientTypeHelpMessage(type: ClientType | undefined): string {
 /**
  * Retourne les champs visibles selon le type de client
  */
-export function getVisibleFieldsForType(type: ClientType | undefined): {
+export function getVisibleFieldsForType(): {
   pro: (keyof ClientFormData)[]
   particulier: (keyof ClientFormData)[]
   always: (keyof ClientFormData)[]

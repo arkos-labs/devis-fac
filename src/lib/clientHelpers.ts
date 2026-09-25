@@ -1,4 +1,4 @@
-import type { Client, ClientType, Civility } from '@/types/database'
+import type { Client, ClientType } from '@/types/database'
 
 /**
  * Retourne le libellé français du type de client
@@ -73,7 +73,6 @@ export function formatClientIdentity(client: Partial<Client> | null | undefined)
   }
 
   const address = [client.adresse, client.code_postal, client.ville].filter(Boolean).join(' ')
-  const extras: string[] = []
 
   if (client.type === 'professionnel') {
     return {
