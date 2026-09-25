@@ -109,6 +109,8 @@ export default function FacturesPage() {
         montant_total:        -facture.montant_total,
         notes_client:         `Avoir pour annulation de la facture ${facture.numero}`,
         avoir_de_facture_id:  facture.id,
+        note_google_snapshot: (facture as any).note_google_snapshot,
+        nombre_avis_google_snapshot: (facture as any).nombre_avis_google_snapshot,
       }).select().single()
       if (avoirErr) throw avoirErr
 

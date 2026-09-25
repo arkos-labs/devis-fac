@@ -137,7 +137,6 @@ export default function SignupPage() {
   const [adresse, setAdresse] = useState('')
   const [emailEntreprise, setEmailEntreprise] = useState('')
   const [telephoneEntreprise, setTelephoneEntreprise] = useState('')
-  const [mentionsLegales, setMentionsLegales] = useState('')
 
   // State
   const [loading, setLoading] = useState(false)
@@ -207,7 +206,7 @@ export default function SignupPage() {
             adresse_entreprise: adresse || null,
             email_entreprise: emailEntreprise || null,
             telephone_entreprise: telephoneEntreprise || null,
-            mentions_legales: mentionsLegales || '',
+            mentions_legales: '',
             prochain_num_devis: 1,
             prochain_num_facture: 1,
             avis_google_url: null,
@@ -412,16 +411,6 @@ export default function SignupPage() {
                           className="input"
                         />
                       </div>
-                    </div>
-
-                    <div className="form-group">
-                      <label htmlFor="mentions" className="label">Mentions légales</label>
-                      <textarea
-                        id="mentions" rows={3}
-                        value={mentionsLegales} onChange={e => setMentionsLegales(e.target.value)}
-                        placeholder="SIRET, conditions de paiement, etc."
-                        className="input resize-none"
-                      />
                     </div>
                   </>
                 )}

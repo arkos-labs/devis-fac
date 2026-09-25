@@ -30,7 +30,7 @@ export default function DevisPage() {
     queryFn: async () => {
       if (IS_DEMO) return DEMO_DEVIS
       const { data, error } = await supabase
-        .from('devis').select('*, clients(nom, email, telephone)')
+        .from('devis').select('*, clients(nom, email, telephone, adresse, ville, code_postal)')
         .eq('user_id', user!.id).order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as Devis[]
@@ -60,6 +60,10 @@ export default function DevisPage() {
           p_user_id: user!.id, p_type: 'devis'
         })
         if (numError) throw numError
+
+        const { data: params } = await supabase
+          .from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', user!.id).single()
+
         const { data: newDevis, error } = await supabase.from('devis').insert({
           user_id: user!.id,
           client_id: form.client_id,
@@ -70,6 +74,8 @@ export default function DevisPage() {
           genere_par_ia: form.genere_par_ia,
           prompt_ia: form.prompt_ia || null,
           statut: 'en_attente',
+          note_google_snapshot: params?.note_google ?? null,
+          nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
         }).select().single()
         if (error) throw error
         devisId = newDevis.id

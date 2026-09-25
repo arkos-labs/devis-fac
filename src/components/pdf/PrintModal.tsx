@@ -48,8 +48,7 @@ export default function PrintModal({ document, type, onClose }: PrintModalProps)
     },
   })
 
-  // ── Charger les infos client si absent ───────────────────
-  const { data: clientData } = useQuery({
+  const { data: clientData, isLoading: clientLoading } = useQuery({
     queryKey: ['client-detail', document.client_id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -90,7 +89,7 @@ export default function PrintModal({ document, type, onClose }: PrintModalProps)
     window.print()
   }
 
-  const isLoading = paramsLoading || lignesLoading
+  const isLoading = paramsLoading || lignesLoading || clientLoading
 
   return createPortal(
     <div

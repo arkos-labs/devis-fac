@@ -60,6 +60,8 @@ export interface Devis {
   notes_internes: string | null
   genere_par_ia: boolean
   prompt_ia: string | null
+  note_google_snapshot: number | null
+  nombre_avis_google_snapshot: number | null
   created_at: string
   updated_at: string
   // Relations jointes
@@ -86,6 +88,8 @@ export interface Facture {
   avoir_de_facture_id: string | null
   taux_penalites_retard: number | null
   indemnite_recouvrement: number | null
+  note_google_snapshot: number | null
+  nombre_avis_google_snapshot: number | null
   created_at: string
   updated_at: string
   // Relations jointes

@@ -191,15 +191,7 @@ export default function LoginPage() {
              style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)' }} />
 
         <div className="relative z-10 w-full max-w-xs text-center">
-          <div className="flex justify-center mb-8">
-            <div className="w-24 h-24 rounded-3xl bg-white/8 border border-white/10 backdrop-blur-sm flex items-center justify-center p-3"
-                 style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.3)' }}>
-              <img src="/logo.png" alt="Clean&Fresh" className="w-full h-full object-contain"
-                   style={{ filter: 'brightness(0) invert(1)' }} />
-            </div>
-          </div>
-
-          <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Clean&Fresh</h1>
+          <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">CRM Pro</h1>
           <p className="text-sm text-slate-300 mb-10 leading-relaxed font-medium">
             Gérez vos devis, factures et clients avec l'intelligence artificielle.
           </p>
@@ -228,8 +220,7 @@ export default function LoginPage() {
 
           {/* Logo mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <img src="/logo.png" alt="Clean&Fresh" className="w-10 h-10 object-contain" />
-            <span className="text-lg font-extrabold text-slate-800 tracking-tight">Clean&Fresh</span>
+            <span className="text-lg font-extrabold text-slate-800 tracking-tight">CRM Pro</span>
           </div>
 
           {!isSupabaseConfigured ? (
