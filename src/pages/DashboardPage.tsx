@@ -38,7 +38,7 @@ function KpiCard({
   return (
     <div
       className={cn(
-        'bg-white border border-slate-100 rounded-lg md:rounded-xl p-3 md:p-6 relative group transition-all duration-200 shadow-sm hover:shadow-md',
+        'bg-white border border-slate-100 rounded-md md:rounded-xl p-2 md:p-6 relative group transition-all duration-200 shadow-sm hover:shadow-md',
         onClick && 'cursor-pointer hover:border-brand-200'
       )}
       onClick={onClick}
@@ -51,15 +51,15 @@ function KpiCard({
       )}
 
       {/* Icon Wrapper */}
-      <div className={cn('w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-2 md:mb-3 flex-shrink-0', iconColorClass)}>
-        <Icon size={16} className="md:w-[18px] md:h-[18px]" strokeWidth={2.5} />
+      <div className={cn('w-6 h-6 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-1 md:mb-3 flex-shrink-0', iconColorClass)}>
+        <Icon size={12} className="md:w-[18px] md:h-[18px]" strokeWidth={2.5} />
       </div>
 
-      <div className="space-y-0 md:space-y-1">
-        <p className="text-[10px] md:text-[13px] font-medium text-slate-500 line-clamp-1">{label}</p>
-        <div className="flex items-center gap-1.5 md:gap-3">
-          <p className="text-sm md:text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
-          {sub && <p className="text-[8px] md:text-[11px] font-medium text-slate-400 whitespace-nowrap">{sub}</p>}
+      <div className="space-y-0">
+        <p className="text-[8px] md:text-[13px] font-semibold text-slate-700 line-clamp-1">{label}</p>
+        <div className="flex items-center gap-0.5 md:gap-3">
+          <p className="text-xs md:text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
+          {sub && <p className="text-[7px] md:text-[11px] font-medium text-slate-400 whitespace-nowrap">{sub}</p>}
         </div>
       </div>
 
@@ -789,10 +789,8 @@ export default function DashboardPage() {
         </button>
       )}
 
-      <div className="overflow-x-auto">
-        <div className="grid grid-cols-4 gap-2 md:gap-4 min-w-max md:min-w-0">
-          {KPI_CARDS.map(card => <KpiCard key={card.label} {...card} />)}
-        </div>
+      <div className="grid grid-cols-4 gap-1 md:gap-4">
+        {KPI_CARDS.map(card => <KpiCard key={card.label} {...card} />)}
       </div>
 
       {/* Chart + Actions rapides */}
