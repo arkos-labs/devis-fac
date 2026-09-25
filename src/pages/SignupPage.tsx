@@ -181,7 +181,17 @@ export default function SignupPage() {
         if (IS_DEMO) {
           userId = DEMO_USER_ID
         } else {
-          const { error: signupError, user } = await signUp(email, password)
+          // On passe les données entreprise dans les metadata Supabase.
+          // Comme ça, même si la confirmation d'email est activée,
+          // le trigger SQL on_new_user_signup pourra les utiliser.
+          const metadata = {
+            nom_entreprise: nomEntreprise,
+            siret: siret.replace(/\s/g, ''),
+            adresse_entreprise: adresse || '',
+            email_entreprise: emailEntreprise || '',
+            telephone_entreprise: telephoneEntreprise || '',
+          }
+          const { error: signupError, user } = await signUp(email, password, metadata)
           if (signupError) {
             if (signupError.message.includes('User already registered'))
               setError('Cet email est déjà utilisé.')
@@ -197,11 +207,12 @@ export default function SignupPage() {
 
         if (!userId) throw new Error('Impossible de récupérer l\'ID utilisateur')
 
-        // On vérifie si l'utilisateur est bien connecté (session active).
-        // Si confirmation d'email activée, la session peut être nulle.
+        // Vérifier si la session est active (pas de confirmation d'email)
+        // ou si Supabase attend une confirmation (email envoyé)
         const { data: { session } } = await supabase.auth.getSession()
-        
+
         if (session) {
+          // Session active : mise à jour immédiate des paramètres
           const { error: updateError } = await supabase
             .from('parametres_compte')
             .update({
@@ -212,12 +223,16 @@ export default function SignupPage() {
               telephone_entreprise: telephoneEntreprise || null,
             })
             .eq('user_id', userId)
-
           if (updateError) throw updateError
+          toast.success('Compte créé ! Connexion en cours…')
+          setTimeout(() => navigate('/dashboard'), 1500)
+        } else {
+          // Confirmation d'email requise
+          toast.success('Compte créé ! Vérifiez votre email pour confirmer votre inscription.')
+          setStep('auth')
+          setError(null)
+          navigate('/login')
         }
-
-        toast.success('Compte créé ! Connexion en cours…')
-        setTimeout(() => navigate('/dashboard'), 1500)
       } catch (err) {
         setError((err as Error).message || 'Erreur lors de la création du compte')
       } finally {

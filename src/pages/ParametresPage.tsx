@@ -507,11 +507,14 @@ export default function ParametresPage() {
                 className="input"
                 value={form.note_google ?? 5}
                 onChange={e => {
-                  const val = e.target.value.replace(',', '.')
-                  // Si l'utilisateur efface tout ou tape juste un point, on garde la string temporairement
-                  // pour ne pas bloquer la saisie. TypeScript râle un peu si on met une string dans un champ number,
-                  // on force donc le type avec as any.
-                  setForm(p => ({ ...p, note_google: val as any }))
+                  const raw = e.target.value.replace(',', '.')
+                  // On garde la valeur brute pendant la saisie pour ne pas bloquer
+                  // la virgule (ex: "4," avant de taper le chiffre final)
+                  // mais on valide que ça ressemble à un nombre
+                  if (raw === '' || raw === '.' || /^\d*\.?\d*$/.test(raw)) {
+                    const parsed = parseFloat(raw)
+                    setForm(p => ({ ...p, note_google: isNaN(parsed) ? 0 : Math.min(5, Math.max(0, parsed)) }))
+                  }
                 }}
               />
             </div>
