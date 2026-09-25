@@ -789,8 +789,10 @@ export default function DashboardPage() {
         </button>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {KPI_CARDS.map(card => <KpiCard key={card.label} {...card} />)}
+      <div className="overflow-x-auto">
+        <div className="grid grid-cols-4 gap-2 md:gap-4 min-w-max md:min-w-0">
+          {KPI_CARDS.map(card => <KpiCard key={card.label} {...card} />)}
+        </div>
       </div>
 
       {/* Chart + Actions rapides */}
