@@ -197,26 +197,24 @@ export default function SignupPage() {
 
         if (!userId) throw new Error('Impossible de récupérer l\'ID utilisateur')
 
-        const { error: insertError } = await supabase
-          .from('parametres_compte')
-          .insert({
-            user_id: userId,
-            nom_entreprise: nomEntreprise,
-            siret: siret.replace(/\s/g, ''),
-            adresse_entreprise: adresse || null,
-            email_entreprise: emailEntreprise || null,
-            telephone_entreprise: telephoneEntreprise || null,
-            mentions_legales: '',
-            prochain_num_devis: 1,
-            prochain_num_facture: 1,
-            avis_google_url: null,
-            note_google: 0,
-            nombre_avis_google: 0,
-            afficher_avis_sur_devis: true,
-            afficher_avis_sur_factures: true,
-          })
+        // On vérifie si l'utilisateur est bien connecté (session active).
+        // Si confirmation d'email activée, la session peut être nulle.
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session) {
+          const { error: updateError } = await supabase
+            .from('parametres_compte')
+            .update({
+              nom_entreprise: nomEntreprise,
+              siret: siret.replace(/\s/g, ''),
+              adresse_entreprise: adresse || null,
+              email_entreprise: emailEntreprise || null,
+              telephone_entreprise: telephoneEntreprise || null,
+            })
+            .eq('user_id', userId)
 
-        if (insertError) throw insertError
+          if (updateError) throw updateError
+        }
 
         toast.success('Compte créé ! Connexion en cours…')
         setTimeout(() => navigate('/dashboard'), 1500)
