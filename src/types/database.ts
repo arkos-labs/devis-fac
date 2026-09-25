@@ -6,6 +6,8 @@ export type StatutDevis = 'en_attente' | 'accepte' | 'refuse' | 'expire'
 export type StatutFacture = 'en_attente' | 'payee' | 'retard' | 'annulee'
 export type MoyenPaiement = 'virement' | 'cheque' | 'especes' | 'carte' | 'autre'
 export type DocumentType = 'devis' | 'facture'
+export type ClientType = 'professionnel' | 'particulier'
+export type Civility = 'M.' | 'Mme' | 'Autre'
 
 // ── parametres_compte ────────────────────────────────────────
 export interface ParametresCompte {
@@ -35,14 +37,29 @@ export interface Client {
   id: string
   user_id: string
   nom: string
+  type: ClientType
   email: string | null
   telephone: string | null
-  adresse: string | null
-  ville: string | null
-  code_postal: string | null
+  adresse: string
+  ville: string
+  code_postal: string
   notes: string | null
+  country: string
   date_creation: string
   dernier_contact: string | null
+  // Champs PROFESSIONNEL
+  company_name: string | null
+  siren: string | null
+  siret: string | null
+  vat_number: string | null
+  legal_form: string | null
+  contact_name: string | null
+  service_address: string | null
+  // Champs PARTICULIER
+  first_name: string | null
+  last_name: string | null
+  civility: Civility | null
+  is_canvassing: boolean
 }
 
 // ── devis ────────────────────────────────────────────────────
@@ -122,6 +139,37 @@ export interface DashboardStats {
   total_clients: number
 }
 
+// ── configuration_relances ──────────────────────────────────
+export interface ConfigurationRelances {
+  id: string
+  user_id: string
+  mois_sans_activite: number
+  message_relance: string
+  actif: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ── relances_historique ──────────────────────────────────────
+export interface RelanceHistorique {
+  id: string
+  user_id: string
+  client_id: string
+  date_relance: string
+  message: string
+  type_relance: 'email' | 'sms' | 'notification'
+  created_at: string
+}
+
+// ── ClientARelancer ──────────────────────────────────────────
+export interface ClientARelancer {
+  client_id: string
+  nom_client: string
+  email_client: string | null
+  mois_depuis_activite: number
+  dernier_contact: string | null
+}
+
 // ── IA Response ──────────────────────────────────────────────
 export interface IAPrestationItem {
   description: string
@@ -141,16 +189,24 @@ export interface IADevisResponse {
 export type Database = {
   public: {
     Tables: {
-      parametres_compte: { Row: ParametresCompte; Insert: Partial<ParametresCompte>; Update: Partial<ParametresCompte> }
-      clients:           { Row: Client;            Insert: Partial<Client>;            Update: Partial<Client> }
-      devis:             { Row: Devis;             Insert: Partial<Devis>;             Update: Partial<Devis> }
-      factures:          { Row: Facture;           Insert: Partial<Facture>;           Update: Partial<Facture> }
-      lignes_prestation: { Row: LignePrestation;   Insert: Partial<LignePrestation>;   Update: Partial<LignePrestation> }
+      parametres_compte:        { Row: ParametresCompte;        Insert: Partial<ParametresCompte>;        Update: Partial<ParametresCompte> }
+      clients:                  { Row: Client;                  Insert: Partial<Client>;                  Update: Partial<Client> }
+      devis:                    { Row: Devis;                   Insert: Partial<Devis>;                   Update: Partial<Devis> }
+      factures:                 { Row: Facture;                 Insert: Partial<Facture>;                 Update: Partial<Facture> }
+      lignes_prestation:        { Row: LignePrestation;         Insert: Partial<LignePrestation>;         Update: Partial<LignePrestation> }
+      configuration_relances:   { Row: ConfigurationRelances;   Insert: Partial<ConfigurationRelances>;   Update: Partial<ConfigurationRelances> }
+      relances_historique:      { Row: RelanceHistorique;       Insert: Partial<RelanceHistorique>;       Update: Partial<RelanceHistorique> }
     }
     Functions: {
       get_next_numero:              { Args: { p_user_id: string; p_type: string }; Returns: string }
       convertir_devis_en_facture:   { Args: { p_devis_id: string; p_user_id: string }; Returns: string }
       get_dashboard_stats:          { Args: { p_user_id: string }; Returns: DashboardStats }
+      get_clients_a_relancer:       { Args: { p_user_id: string }; Returns: ClientARelancer[] }
+      envoyer_relance:              { Args: { p_user_id: string; p_client_id: string }; Returns: Record<string, any> }
+      validate_luhn_siren:          { Args: { p_siren: string }; Returns: boolean }
+      get_client_type_label:        { Args: { p_type: ClientType }; Returns: string }
+      get_client_display_name:      { Args: { p_client_id: string }; Returns: string }
+      get_legal_notices:            { Args: { p_client_id: string }; Returns: string }
     }
   }
 }
