@@ -38,7 +38,7 @@ function KpiCard({
   return (
     <div
       className={cn(
-        'bg-white border border-slate-100 rounded-xl p-6 relative group transition-all duration-200 shadow-sm hover:shadow-md',
+        'bg-white border border-slate-100 rounded-lg md:rounded-xl p-3 md:p-6 relative group transition-all duration-200 shadow-sm hover:shadow-md',
         onClick && 'cursor-pointer hover:border-brand-200'
       )}
       onClick={onClick}
@@ -49,17 +49,17 @@ function KpiCard({
           <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
         </span>
       )}
-      
-      {/* Small Icon Wrapper */}
-      <div className={cn('w-10 h-10 rounded-full flex items-center justify-center mb-5', iconColorClass)}>
-        <Icon size={18} strokeWidth={2.5} />
+
+      {/* Icon Wrapper */}
+      <div className={cn('w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-3 md:mb-5', iconColorClass)}>
+        <Icon size={16} className="md:w-[18px] md:h-[18px]" strokeWidth={2.5} />
       </div>
 
-      <div className="space-y-1">
-        <p className="text-[13px] font-medium text-slate-500">{label}</p>
-        <div className="flex items-end gap-3">
-          <p className="text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
-          {sub && <p className="text-[11px] font-medium text-slate-400 mb-1">{sub}</p>}
+      <div className="space-y-0.5 md:space-y-1">
+        <p className="text-[11px] md:text-[13px] font-medium text-slate-500">{label}</p>
+        <div className="flex items-end gap-2 md:gap-3">
+          <p className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
+          {sub && <p className="text-[9px] md:text-[11px] font-medium text-slate-400 mb-0.5">{sub}</p>}
         </div>
       </div>
 
