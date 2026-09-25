@@ -114,6 +114,7 @@ export interface LignePrestation {
   unite: string
   prix_unitaire: number
   montant_ligne: number
+  is_upsell: boolean
   created_at: string
 }
 

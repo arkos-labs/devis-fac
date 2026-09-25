@@ -89,30 +89,30 @@ export const DEMO_LIGNES: LignePrestation[] = [
   // Devis D-0005 (Maison 75m²)
   { id: 'l-001', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
     ordre: 0, description: 'Nettoyage des sols', detail: 'Aspiration, lavage et lustrage de tous les revêtements',
-    quantite: 75, unite: 'm²', prix_unitaire: 2.5, montant_ligne: 187.5, created_at: '2026-09-01T10:00:00Z' },
+    quantite: 75, unite: 'm²', prix_unitaire: 2.5, montant_ligne: 187.5, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-002', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
     ordre: 1, description: 'Dépoussiérage général', detail: 'Meubles, plinthes, prises, interrupteurs',
-    quantite: 1, unite: 'forfait', prix_unitaire: 95, montant_ligne: 95, created_at: '2026-09-01T10:00:00Z' },
+    quantite: 1, unite: 'forfait', prix_unitaire: 95, montant_ligne: 95, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-003', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
     ordre: 2, description: 'Nettoyage cuisine', detail: 'Dégraissage four, hotte, plan de travail, évier',
-    quantite: 1, unite: 'forfait', prix_unitaire: 120, montant_ligne: 120, created_at: '2026-09-01T10:00:00Z' },
+    quantite: 1, unite: 'forfait', prix_unitaire: 120, montant_ligne: 120, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-004', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
     ordre: 3, description: 'Nettoyage salle de bain', detail: 'Détartrage, joints, miroirs, sanitaires',
-    quantite: 2, unite: 'pièce', prix_unitaire: 65, montant_ligne: 130, created_at: '2026-09-01T10:00:00Z' },
+    quantite: 2, unite: 'pièce', prix_unitaire: 65, montant_ligne: 130, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-005', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
     ordre: 4, description: 'Nettoyage vitres', detail: 'Intérieur et extérieur accessible',
-    quantite: 8, unite: 'pièce', prix_unitaire: 12, montant_ligne: 96, created_at: '2026-09-01T10:00:00Z' },
+    quantite: 8, unite: 'pièce', prix_unitaire: 12, montant_ligne: 96, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
 
   // Facture F-0003 (Cabinet)
   { id: 'l-010', user_id: DEMO_USER_ID, document_type: 'facture', document_id: 'facture-003',
     ordre: 0, description: 'Nettoyage bureaux', detail: 'Aspiration moquettes, essuyage bureaux et écrans',
-    quantite: 3, unite: 'étage', prix_unitaire: 180, montant_ligne: 540, created_at: '2026-09-05T08:00:00Z' },
+    quantite: 3, unite: 'étage', prix_unitaire: 180, montant_ligne: 540, is_upsell: false, created_at: '2026-09-05T08:00:00Z' },
   { id: 'l-011', user_id: DEMO_USER_ID, document_type: 'facture', document_id: 'facture-003',
     ordre: 1, description: 'Nettoyage sanitaires', detail: 'Désinfection complète des 4 blocs sanitaires',
-    quantite: 4, unite: 'pièce', prix_unitaire: 45, montant_ligne: 180, created_at: '2026-09-05T08:00:00Z' },
+    quantite: 4, unite: 'pièce', prix_unitaire: 45, montant_ligne: 180, is_upsell: false, created_at: '2026-09-05T08:00:00Z' },
   { id: 'l-012', user_id: DEMO_USER_ID, document_type: 'facture', document_id: 'facture-003',
     ordre: 2, description: 'Nettoyage salle de réunion', detail: 'Vitres, tables, sièges, tableau',
-    quantite: 1, unite: 'forfait', prix_unitaire: 130, montant_ligne: 130, created_at: '2026-09-05T08:00:00Z' },
+    quantite: 1, unite: 'forfait', prix_unitaire: 130, montant_ligne: 130, is_upsell: false, created_at: '2026-09-05T08:00:00Z' },
 ]
 
 // ── Devis ─────────────────────────────────────────────────────

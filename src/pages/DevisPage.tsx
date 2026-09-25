@@ -6,7 +6,7 @@ import { formatEuros, formatDate } from '@/lib/utils'
 import type { Devis, Client } from '@/types/database'
 import {
   Plus, Search, Zap, FileText,
-  ChevronDown, ArrowRight, Copy, Eye
+  ChevronDown, ArrowRight, Copy, Eye, Pencil
 } from 'lucide-react'
 import PrintModal from '@/components/pdf/PrintModal'
 import DevisModal, { type LigneForm, type DevisFormData } from '@/components/devis/DevisModal'
@@ -30,7 +30,7 @@ export default function DevisPage() {
     queryFn: async () => {
       if (IS_DEMO) return DEMO_DEVIS
       const { data, error } = await supabase
-        .from('devis').select('*, clients(nom, email, telephone, adresse, ville, code_postal)')
+        .from('devis').select('*, clients(nom, email, telephone, adresse, ville, code_postal), lignes_prestation(*)')
         .eq('user_id', user!.id).order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as Devis[]
@@ -299,6 +299,13 @@ export default function DevisPage() {
                     <td>
                       <div className="flex items-center gap-1">
                         <button
+                          title="Modifier"
+                          onClick={() => { setEditingDevis(d); setShowModal(true) }}
+                          className="btn-icon btn-ghost btn-sm text-blue-600 hover:bg-blue-50"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
                           title="Aperçu PDF"
                           onClick={() => setPrintDoc(d)}
                           className="btn-icon btn-ghost btn-sm text-brand-600 hover:bg-brand-50"
@@ -351,7 +358,7 @@ export default function DevisPage() {
       {/* ── Modal création/édition ──────────────────────────── */}
       {showModal && (
         <DevisModal
-          editingNumero={editingDevis?.numero}
+          editingDevis={editingDevis}
           onSave={(form, lignes) => saveDevis.mutate({ form, lignes })}
           onClose={closeModal}
           isSaving={saveDevis.isPending}

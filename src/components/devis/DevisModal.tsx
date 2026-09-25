@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros } from '@/lib/utils'
-import type { Client, IAPrestationItem } from '@/types/database'
+import type { Client, IAPrestationItem, Devis } from '@/types/database'
 import {
   X, Plus, Zap, Loader2, ChevronDown,
   Trash2, Tag, Check, Mail
@@ -49,7 +49,7 @@ interface PrestationRow {
 }
 
 interface Props {
-  editingNumero?: string
+  editingDevis?: Devis | null
   onSave: (form: DevisFormData, lignes: LigneForm[]) => void
   onClose: () => void
   isSaving: boolean
@@ -68,7 +68,7 @@ const dateIn30Days = () => {
   return d.toISOString().slice(0, 10)
 }
 
-export default function DevisModal({ editingNumero, onSave, onClose, isSaving }: Props) {
+export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: Props) {
   const { user } = useAuth()
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
   const [form, setForm] = useState<DevisFormData>({
@@ -78,6 +78,49 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
   const [showIA, setShowIA] = useState(false)
   const [promptIA, setPromptIA] = useState('')
   const [iaLoading, setIALoading] = useState(false)
+
+  // Initialize from editingDevis
+  useEffect(() => {
+    if (editingDevis) {
+      setForm({
+        client_id: editingDevis.client_id,
+        date_validite: editingDevis.date_validite || dateIn30Days(),
+        notes_client: editingDevis.notes_client || '',
+        notes_internes: editingDevis.notes_internes || '',
+        genere_par_ia: editingDevis.genere_par_ia,
+        prompt_ia: editingDevis.prompt_ia || '',
+        titre: editingDevis.titre || ''
+      })
+      if (editingDevis.lignes_prestation && editingDevis.lignes_prestation.length > 0) {
+        const sortedLignes = [...editingDevis.lignes_prestation].sort((a, b) => a.ordre - b.ordre)
+        const newRows: PrestationRow[] = []
+        
+        for (const ligne of sortedLignes) {
+          if (!ligne.is_upsell) {
+            newRows.push({
+              uid: ++UID,
+              catalogueId: undefined, // Catalogue link not preserved in db directly for now
+              description: ligne.description,
+              prix: ligne.prix_unitaire,
+              quantite: ligne.quantite,
+              unite: ligne.unite,
+              options: []
+            })
+          } else {
+            if (newRows.length > 0) {
+              newRows[newRows.length - 1].options.push({
+                description: ligne.description,
+                prix: ligne.prix_unitaire
+              })
+            }
+          }
+        }
+        if (newRows.length > 0) {
+          setRows(newRows)
+        }
+      }
+    }
+  }, [editingDevis])
 
   const qc = useQueryClient()
   const [showNewClient, setShowNewClient] = useState(false)
@@ -283,10 +326,10 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
         {/* ── Header ──────────────────────────────────────── */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <h2 className="text-base font-bold text-slate-800">
-            {editingNumero ? `Modifier ${editingNumero}` : 'Nouveau devis'}
+            {editingDevis ? `Modifier ${editingDevis.numero}` : 'Nouveau devis'}
           </h2>
           <div className="flex items-center gap-2">
-            {!editingNumero && (
+            {!editingDevis && (
               <button onClick={() => setShowIA(v => !v)}
                 className="btn-sm btn bg-gradient-to-r from-violet-600 to-blue-600 text-white gap-1.5">
                 <Zap size={12} /> Auto
@@ -647,7 +690,7 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
             <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 gap-1.5">
               {isSaving
                 ? <><Loader2 size={13} className="animate-spin" /> Enregistrement…</>
-                : editingNumero
+                : editingDevis
                   ? 'Mettre à jour'
                   : `Créer${totalAvecOptions > 0 ? ' — ' + formatEuros(totalAvecOptions) : ''}`
               }
