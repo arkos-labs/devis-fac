@@ -51,15 +51,15 @@ function KpiCard({
       )}
 
       {/* Icon Wrapper */}
-      <div className={cn('w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-3 md:mb-5', iconColorClass)}>
+      <div className={cn('w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center mb-2 md:mb-3 flex-shrink-0', iconColorClass)}>
         <Icon size={16} className="md:w-[18px] md:h-[18px]" strokeWidth={2.5} />
       </div>
 
-      <div className="space-y-0.5 md:space-y-1">
-        <p className="text-[11px] md:text-[13px] font-medium text-slate-500">{label}</p>
-        <div className="flex items-end gap-2 md:gap-3">
-          <p className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
-          {sub && <p className="text-[9px] md:text-[11px] font-medium text-slate-400 mb-0.5">{sub}</p>}
+      <div className="space-y-0 md:space-y-1">
+        <p className="text-[10px] md:text-[13px] font-medium text-slate-500 line-clamp-1">{label}</p>
+        <div className="flex items-center gap-1.5 md:gap-3">
+          <p className="text-sm md:text-2xl font-bold text-slate-800 tracking-tight">{value}</p>
+          {sub && <p className="text-[8px] md:text-[11px] font-medium text-slate-400 whitespace-nowrap">{sub}</p>}
         </div>
       </div>
 
