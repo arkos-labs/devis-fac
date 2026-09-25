@@ -138,6 +138,63 @@ export default function DevisPage() {
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
 
+  // ── Dupliquer devis ──────────────────────────────────────────
+  const dupliquerDevis = useMutation({
+    mutationFn: async (devis: Devis) => {
+      const { data: lignesOriginales, error: errLignes } = await supabase
+        .from('lignes_prestation')
+        .select('*')
+        .eq('document_id', devis.id)
+        .eq('document_type', 'devis')
+        .order('ordre')
+      if (errLignes) throw errLignes
+
+      const { data: numero, error: errNum } = await supabase.rpc('get_next_numero', {
+        p_user_id: user!.id, p_type: 'devis'
+      })
+      if (errNum) throw errNum
+
+      const { data: newDevis, error: errInsert } = await supabase.from('devis').insert({
+        user_id: user!.id,
+        client_id: devis.client_id,
+        numero: numero as string,
+        date_validite: devis.date_validite,
+        notes_client: devis.notes_client,
+        notes_internes: devis.notes_internes,
+        titre: devis.titre,
+        genere_par_ia: false,
+        statut: 'en_attente',
+        note_google_snapshot: devis.note_google_snapshot,
+        nombre_avis_google_snapshot: devis.nombre_avis_google_snapshot,
+      }).select().single()
+      if (errInsert) throw errInsert
+
+      if (lignesOriginales && lignesOriginales.length > 0) {
+        const linesToInsert = lignesOriginales.map(l => ({
+          user_id: user!.id,
+          document_type: 'devis' as const,
+          document_id: newDevis.id,
+          ordre: l.ordre,
+          description: l.description,
+          detail: l.detail,
+          quantite: l.quantite,
+          unite: l.unite,
+          prix_unitaire: l.prix_unitaire,
+          is_upsell: l.is_upsell
+        }))
+        const { error: errLignesInsert } = await supabase.from('lignes_prestation').insert(linesToInsert)
+        if (errLignesInsert) throw errLignesInsert
+      }
+      return newDevis
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['devis'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast.success('Devis dupliqué avec succès !')
+    },
+    onError: (e) => toast.error(`Erreur duplication : ${(e as Error).message}`),
+  })
+
   // ── Helpers ──────────────────────────────────────────────────
   const openNew = () => { setEditingDevis(null); setShowModal(true) }
   const closeModal = () => { setShowModal(false); setEditingDevis(null) }
@@ -262,8 +319,13 @@ export default function DevisPage() {
                         </button>
                         <button
                           title="Dupliquer"
-                          className="btn-icon btn-ghost btn-sm"
-                          onClick={() => toast.success('Duplication — fonctionnalité à venir')}
+                          className="btn-icon btn-ghost btn-sm disabled:opacity-30"
+                          disabled={dupliquerDevis.isPending}
+                          onClick={() => {
+                            if (confirm(`Dupliquer le devis ${d.numero} ?`)) {
+                              dupliquerDevis.mutate(d)
+                            }
+                          }}
                         >
                           <Copy size={13} />
                         </button>
