@@ -9,7 +9,7 @@ import {
   ArrowLeft, Phone, Mail, MapPin, CalendarPlus, Euro,
   FileText, Receipt, TrendingUp, Clock, CheckCircle2,
   AlertCircle, XCircle, ExternalLink, Calendar, User,
-  ChevronRight
+  ChevronRight, Send, Bell
 } from 'lucide-react'
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -216,6 +216,18 @@ export default function ClientDetailPage() {
         .order('date_creation', { ascending: false })
       if (error) throw error
       return (data ?? []) as Facture[]
+    },
+    enabled: !!user && !!id,
+  })
+
+  const { data: remindersList = [] } = useQuery<any[]>({
+    queryKey: ['client-reminders', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('relances_historique').select('*').eq('client_id', id!).eq('user_id', user!.id)
+        .order('date_envoi', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as any[]
     },
     enabled: !!user && !!id,
   })
@@ -486,6 +498,49 @@ export default function ClientDetailPage() {
           </div>
         )}
       </section>
+
+      {/* ── Historique des actions ────────────────────────── */}
+      {(devisList.length > 0 || remindersList.length > 0) && (
+        <section>
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Historique</h2>
+          <div className="card p-0 overflow-hidden">
+            <div className="divide-y divide-slate-50">
+              {/* Timeline des devis et relances */}
+              {[
+                ...devisList.map(d => ({
+                  type: 'devis',
+                  date: d.date_creation,
+                  label: `Devis ${d.numero} envoyé`,
+                  sub: `${formatEuros(d.montant_total)} - ${d.statut}`,
+                  icon: <Send size={16} className="text-blue-600" />,
+                  color: 'bg-blue-50 border-l-4 border-blue-400',
+                })),
+                ...remindersList.map(r => ({
+                  type: 'reminder',
+                  date: r.date_envoi,
+                  label: 'Relance envoyée',
+                  sub: r.message || 'Relance client',
+                  icon: <Bell size={16} className="text-amber-600" />,
+                  color: 'bg-amber-50 border-l-4 border-amber-400',
+                })),
+              ]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((event, idx) => (
+                  <div key={idx} className={`p-4 flex gap-3 ${event.color}`}>
+                    <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {event.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-800 text-sm">{event.label}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{formatDate(event.date)}</p>
+                      {event.sub && <p className="text-xs text-slate-600 mt-1">{event.sub}</p>}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Google Calendar CTA ───────────────────────────── */}
       <div
