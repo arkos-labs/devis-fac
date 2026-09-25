@@ -503,10 +503,16 @@ export default function ParametresPage() {
             <div className="form-group">
               <label className="label">Note (sur 5)</label>
               <input
-                type="number" min="0" max="5" step="0.1"
+                type="text" inputMode="decimal"
                 className="input"
                 value={form.note_google ?? 5}
-                onChange={e => setForm(p => ({ ...p, note_google: parseFloat(e.target.value) }))}
+                onChange={e => {
+                  const val = e.target.value.replace(',', '.')
+                  // Si l'utilisateur efface tout ou tape juste un point, on garde la string temporairement
+                  // pour ne pas bloquer la saisie. TypeScript râle un peu si on met une string dans un champ number,
+                  // on force donc le type avec as any.
+                  setForm(p => ({ ...p, note_google: val as any }))
+                }}
               />
             </div>
             <div className="form-group">
