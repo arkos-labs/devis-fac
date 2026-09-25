@@ -122,7 +122,7 @@ export function RemindersSection() {
                   min="1"
                   max="36"
                   value={formData.mois_sans_activite}
-                  onChange={(e) => setFormData(p => ({ ...p, mois_sans_activite: parseInt(e.target.value) }))}
+                  onChange={(e) => setFormData(p => ({ ...p, mois_sans_activite: parseInt(e.target.value) || 0 }))}
                   className="input w-20"
                 />
                 <span className="text-sm text-slate-500">mois</span>

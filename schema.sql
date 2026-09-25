@@ -807,7 +807,10 @@ BEGIN
         c.id,
         c.nom,
         c.email,
-        EXTRACT(EPOCH FROM (now() - COALESCE(c.dernier_contact, c.date_creation))) / (86400 * 30)::INT AS mois,
+        -- Le cast ::INT doit envelopper TOUTE la division, pas juste le diviseur,
+        -- sinon Postgres renvoie un numeric/double et PostgREST échoue avec une 400
+        -- ("structure of query does not match function result type").
+        (EXTRACT(EPOCH FROM (now() - COALESCE(c.dernier_contact, c.date_creation))) / (86400 * 30))::INT AS mois,
         c.dernier_contact
     FROM public.clients c
     WHERE c.user_id = p_user_id

@@ -570,7 +570,7 @@ export default function ParametresPage() {
                 type="number" min="0"
                 className="input"
                 value={form.nombre_avis_google ?? 0}
-                onChange={e => setForm(p => ({ ...p, nombre_avis_google: parseInt(e.target.value) }))}
+                onChange={e => setForm(p => ({ ...p, nombre_avis_google: parseInt(e.target.value) || 0 }))}
               />
             </div>
             <div className="form-group flex flex-col justify-end">
