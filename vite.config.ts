@@ -28,14 +28,38 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-api',
+              expiration: { maxEntries: 100, maxAgeSeconds: 3600 },
+              networkTimeoutSeconds: 5
+            }
+          },
+          {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-auth',
+              expiration: { maxEntries: 10, maxAgeSeconds: 1800 }
+            }
+          },
+          {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 }
+              cacheName: 'supabase-other',
+              expiration: { maxEntries: 50, maxAgeSeconds: 7200 }
             }
+          },
+          {
+            urlPattern: /^https:\/\/api\.resend\.com\/.*/i,
+            handler: 'NetworkOnly',
+            options: { cacheName: 'resend-api' }
           }
-        ]
+        ],
+        cleanupOutdatedCaches: true,
+        skipWaiting: true
       }
     })
   ],
