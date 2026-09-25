@@ -58,6 +58,7 @@ export interface Devis {
   montant_total: number
   notes_client: string | null
   notes_internes: string | null
+  titre: string | null
   genere_par_ia: boolean
   prompt_ia: string | null
   note_google_snapshot: number | null
@@ -83,6 +84,7 @@ export interface Facture {
   montant_total: number
   notes_client: string | null
   notes_internes: string | null
+  titre: string | null
   date_paiement: string | null
   moyen_paiement: MoyenPaiement | null
   avoir_de_facture_id: string | null

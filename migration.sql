@@ -113,3 +113,46 @@ CREATE INDEX IF NOT EXISTS idx_factures_avoir ON public.factures(avoir_de_factur
 -- ============================================================
 -- FIN DE LA MIGRATION
 -- ============================================================
+-- ── 7. Colonne titre ──────────────────────────────────────────
+ALTER TABLE public.devis ADD COLUMN IF NOT EXISTS titre TEXT;
+ALTER TABLE public.factures ADD COLUMN IF NOT EXISTS titre TEXT;
+-- ── 8. Maj convertir_devis_en_facture ─────────────────────────
+CREATE OR REPLACE FUNCTION public.convertir_devis_en_facture(p_devis_id UUID, p_user_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $func
+DECLARE
+    v_facture_id UUID;
+    v_numero TEXT;
+    v_devis RECORD;
+BEGIN
+    SELECT * INTO v_devis FROM public.devis
+    WHERE id = p_devis_id AND user_id = p_user_id AND statut = 'accepte';
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Devis introuvable ou non accepté.';
+    END IF;
+
+    v_numero := public.get_next_numero(p_user_id, 'facture');
+
+    INSERT INTO public.factures (
+        user_id, client_id, devis_id, numero, statut, date_echeance, notes_client, notes_internes, titre
+    ) VALUES (
+        p_user_id, v_devis.client_id, p_devis_id, v_numero, 'en_attente', CURRENT_DATE + 30, v_devis.notes_client, v_devis.notes_internes, v_devis.titre
+    ) RETURNING id INTO v_facture_id;
+
+    INSERT INTO public.lignes_prestation (
+        user_id, document_type, document_id, description, detail, quantite, unite, prix_unitaire, ordre, is_upsell
+    )
+    SELECT
+        p_user_id, 'facture', v_facture_id, description, detail, quantite, unite, prix_unitaire, ordre, is_upsell
+    FROM public.lignes_prestation
+    WHERE document_type = 'devis' AND document_id = p_devis_id;
+
+    UPDATE public.devis SET statut = 'facture' WHERE id = p_devis_id;
+
+    RETURN v_facture_id;
+END;
+$func;

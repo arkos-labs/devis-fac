@@ -50,6 +50,7 @@ export default function DevisPage() {
           date_validite: form.date_validite || null,
           notes_client: form.notes_client || null,
           notes_internes: form.notes_internes || null,
+          titre: form.titre || null,
         }).eq('id', editingDevis.id)
         if (error) throw error
         devisId = editingDevis.id
@@ -71,6 +72,7 @@ export default function DevisPage() {
           date_validite: form.date_validite || null,
           notes_client: form.notes_client || null,
           notes_internes: form.notes_internes || null,
+          titre: form.titre || null,
           genere_par_ia: form.genere_par_ia,
           prompt_ia: form.prompt_ia || null,
           statut: 'en_attente',
