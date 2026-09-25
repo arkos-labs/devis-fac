@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.parametres_compte (
     avis_google_url     TEXT,            -- Lien vers la page Google Avis
     note_google         NUMERIC(2,1) DEFAULT 5.0,
     nombre_avis_google  INT DEFAULT 0,
+    afficher_avis_sur_devis BOOLEAN NOT NULL DEFAULT true,
+    afficher_avis_sur_factures BOOLEAN NOT NULL DEFAULT true,
     -- Numérotation : prochains numéros disponibles
     prochain_num_devis  INT NOT NULL DEFAULT 1,
     prochain_num_facture INT NOT NULL DEFAULT 1,
@@ -96,6 +98,8 @@ CREATE TABLE IF NOT EXISTS public.devis (
     -- Traçabilité de la génération IA
     genere_par_ia   BOOLEAN NOT NULL DEFAULT false,
     prompt_ia       TEXT,               -- Prompt utilisé pour l'IA
+    note_google_snapshot NUMERIC(2,1),  -- Snapshot de la note Google au moment du devis
+    nombre_avis_google_snapshot INT,    -- Snapshot du nombre d'avis Google au moment du devis
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- Le numéro doit être unique par compte
@@ -131,6 +135,12 @@ CREATE TABLE IF NOT EXISTS public.factures (
     notes_internes  TEXT,
     date_paiement   TIMESTAMPTZ,        -- Renseignée quand statut = 'payee'
     moyen_paiement  TEXT CHECK (moyen_paiement IN ('virement', 'cheque', 'especes', 'carte', 'autre')),
+    -- Avoir (facture d'annulation/remboursement liée)
+    avoir_de_facture_id UUID REFERENCES public.factures(id) ON DELETE SET NULL,
+    taux_penalites_retard   NUMERIC(5,2) DEFAULT 12.00,  -- % annuel de pénalités de retard
+    indemnite_recouvrement  NUMERIC(6,2) DEFAULT 40.00,  -- Indemnité forfaitaire de recouvrement (€)
+    note_google_snapshot NUMERIC(2,1),  -- Snapshot de la note Google au moment de la facture
+    nombre_avis_google_snapshot INT,    -- Snapshot du nombre d'avis Google au moment de la facture
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_facture_numero_user UNIQUE (user_id, numero)
@@ -218,12 +228,51 @@ COMMENT ON TABLE public.lignes_prestation IS 'Lignes de prestation pour devis et
 
 
 -- ============================================================
+-- 6b. TABLE : catalogue_prestations
+--     Catalogue réutilisable de prestations + options (upsells)
+--     par utilisateur, utilisé pour pré-remplir les devis.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.catalogue_prestations (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id         UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    nom             TEXT NOT NULL,
+    description     TEXT,
+    categorie       TEXT NOT NULL DEFAULT 'custom',
+    prix_defaut     NUMERIC(10, 2) DEFAULT 0,
+    unite           TEXT DEFAULT 'forfait',
+    is_upsell       BOOLEAN DEFAULT false,
+    upsell_pour     TEXT[],             -- Legacy : catégories concernées par l'upsell
+    parent_id       UUID REFERENCES public.catalogue_prestations(id) ON DELETE CASCADE,
+    actif           BOOLEAN DEFAULT true,
+    ordre           INT DEFAULT 0,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_user_id  ON public.catalogue_prestations(user_id);
+CREATE INDEX IF NOT EXISTS idx_catalogue_parent_id ON public.catalogue_prestations(parent_id);
+
+COMMENT ON TABLE public.catalogue_prestations IS 'Catalogue de prestations et options réutilisables par utilisateur pour pré-remplir les devis.';
+
+ALTER TABLE public.catalogue_prestations ENABLE ROW LEVEL SECURITY;
+
+-- user_id NULL = ligne globale (partagée), sinon visible seulement par son propriétaire
+CREATE POLICY "read_catalogue" ON public.catalogue_prestations
+    FOR SELECT USING (user_id IS NULL OR (select auth.uid()) = user_id);
+
+CREATE POLICY "write_catalogue" ON public.catalogue_prestations
+    FOR ALL USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.catalogue_prestations TO authenticated;
+
+
+-- ============================================================
 -- 7. TRIGGERS : updated_at automatique
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     NEW.updated_at = now();
@@ -253,6 +302,7 @@ CREATE OR REPLACE FUNCTION public.sync_montant_document()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     v_total NUMERIC(12,2);
@@ -315,6 +365,12 @@ DECLARE
     v_lock_key  BIGINT;
     v_result    TEXT;
 BEGIN
+    -- Sécurité : un utilisateur ne peut agir que sur son propre compte
+    -- (SECURITY DEFINER bypass RLS, cette vérification est obligatoire)
+    IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Accès non autorisé';
+    END IF;
+
     -- Validation du type
     IF p_type NOT IN ('devis', 'facture') THEN
         RAISE EXCEPTION 'Type invalide : %. Valeurs acceptées : devis, facture.', p_type;
@@ -383,6 +439,11 @@ DECLARE
     v_num_facture   TEXT;
     v_facture_id    UUID;
 BEGIN
+    -- Sécurité : un utilisateur ne peut agir que sur son propre compte
+    IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Accès non autorisé';
+    END IF;
+
     -- Récupérer le devis et vérifier les droits
     SELECT * INTO v_devis
     FROM public.devis
@@ -459,6 +520,11 @@ AS $$
 DECLARE
     v_result JSON;
 BEGIN
+    -- Sécurité : un utilisateur ne peut agir que sur son propre compte
+    IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Accès non autorisé';
+    END IF;
+
     SELECT json_build_object(
         -- CA encaissé ce mois
         'ca_mois_courant', (
@@ -542,96 +608,104 @@ ALTER TABLE public.lignes_prestation        FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.configuration_relances   FORCE ROW LEVEL SECURITY;
 ALTER TABLE public.relances_historique      FORCE ROW LEVEL SECURITY;
 
+-- NOTE : (select auth.uid()) au lieu de auth.uid() nu — évite la ré-évaluation
+-- de la fonction pour chaque ligne (recommandation Supabase, cf. advisor perf).
+
 -- ── parametres_compte ──────────────────────────────────────
 CREATE POLICY "proprio_select_parametres" ON public.parametres_compte
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_parametres" ON public.parametres_compte
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_parametres" ON public.parametres_compte
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_delete_parametres" ON public.parametres_compte
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- ── clients ───────────────────────────────────────────────
 CREATE POLICY "proprio_select_clients" ON public.clients
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_clients" ON public.clients
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_clients" ON public.clients
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_delete_clients" ON public.clients
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- ── devis ─────────────────────────────────────────────────
 CREATE POLICY "proprio_select_devis" ON public.devis
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_devis" ON public.devis
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_devis" ON public.devis
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_delete_devis" ON public.devis
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- ── factures ──────────────────────────────────────────────
+-- IMPORTANT : une facture émise est légalement immuable (France) — pas de
+-- policy de suppression pour le propriétaire, uniquement "factures_no_delete"
+-- (deny-all) + le trigger prevent_facture_content_change. Toute correction
+-- doit passer par un Avoir (voir avoir_de_facture_id), jamais par un DELETE/UPDATE
+-- des champs comptables.
 CREATE POLICY "proprio_select_factures" ON public.factures
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_factures" ON public.factures
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_factures" ON public.factures
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
-CREATE POLICY "proprio_delete_factures" ON public.factures
-    FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "factures_no_delete" ON public.factures
+    FOR DELETE USING (false);
 
 -- ── lignes_prestation ─────────────────────────────────────
 CREATE POLICY "proprio_select_lignes" ON public.lignes_prestation
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_lignes" ON public.lignes_prestation
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_lignes" ON public.lignes_prestation
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_delete_lignes" ON public.lignes_prestation
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- ── configuration_relances ────────────────────────────────
 CREATE POLICY "proprio_select_config_relances" ON public.configuration_relances
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_config_relances" ON public.configuration_relances
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_config_relances" ON public.configuration_relances
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_delete_config_relances" ON public.configuration_relances
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((select auth.uid()) = user_id);
 
 -- ── relances_historique ───────────────────────────────────
 CREATE POLICY "proprio_select_relances_histo" ON public.relances_historique
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_insert_relances_histo" ON public.relances_historique
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_update_relances_histo" ON public.relances_historique
-    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+    FOR UPDATE USING ((select auth.uid()) = user_id) WITH CHECK ((select auth.uid()) = user_id);
 
 CREATE POLICY "proprio_delete_relances_histo" ON public.relances_historique
-    FOR DELETE USING (auth.uid() = user_id);
+    FOR DELETE USING ((select auth.uid()) = user_id);
 
 
 -- ============================================================
@@ -689,6 +763,12 @@ GRANT EXECUTE ON FUNCTION public.get_next_numero(UUID, TEXT)             TO auth
 GRANT EXECUTE ON FUNCTION public.convertir_devis_en_facture(UUID, UUID)  TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_dashboard_stats(UUID)               TO authenticated;
 
+-- Ces fonctions sont SECURITY DEFINER (bypass RLS) : elles vérifient elles-mêmes
+-- que auth.uid() = p_user_id, mais on retire quand même l'accès anonyme par défense en profondeur.
+REVOKE EXECUTE ON FUNCTION public.get_next_numero(UUID, TEXT)             FROM anon;
+REVOKE EXECUTE ON FUNCTION public.convertir_devis_en_facture(UUID, UUID)  FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_dashboard_stats(UUID)               FROM anon;
+
 
 -- ============================================================
 -- 15. FONCTION : Trouver les clients à relancer
@@ -708,6 +788,11 @@ AS $$
 DECLARE
     v_mois_config INT;
 BEGIN
+    -- Sécurité : un utilisateur ne peut agir que sur son propre compte
+    IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Accès non autorisé';
+    END IF;
+
     -- Récupérer la configuration de l'utilisateur
     SELECT mois_sans_activite INTO v_mois_config
     FROM public.configuration_relances
@@ -741,6 +826,7 @@ $$;
 COMMENT ON FUNCTION public.get_clients_a_relancer IS 'Retourne les clients sans activité depuis X mois (configurable).';
 
 GRANT EXECUTE ON FUNCTION public.get_clients_a_relancer(UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_clients_a_relancer(UUID) FROM anon;
 
 
 -- ============================================================
@@ -762,6 +848,11 @@ DECLARE
     v_relance_id UUID;
     v_result JSON;
 BEGIN
+    -- Sécurité : un utilisateur ne peut agir que sur son propre compte
+    IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Accès non autorisé';
+    END IF;
+
     -- Vérifier les droits
     SELECT * INTO v_client FROM public.clients
     WHERE id = p_client_id AND user_id = p_user_id;
@@ -799,6 +890,73 @@ $$;
 COMMENT ON FUNCTION public.envoyer_relance IS 'Envoie une relance à un client et enregistre l''action.';
 
 GRANT EXECUTE ON FUNCTION public.envoyer_relance(UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.envoyer_relance(UUID, UUID) FROM anon;
+
+
+-- ============================================================
+-- 16b. FONCTION : Statistiques par client (fiche client)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_client_stats(p_client_id uuid, p_user_id uuid)
+RETURNS TABLE(
+    total_depense numeric, ca_devis numeric, nb_factures bigint, nb_devis bigint,
+    nb_factures_payees bigint, nb_devis_acceptes bigint, derniere_facture date
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    -- Sécurité : un utilisateur ne peut agir que sur son propre compte
+    IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
+        RAISE EXCEPTION 'Accès non autorisé';
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        COALESCE(SUM(f.montant_total) FILTER (WHERE f.statut IN ('payee','partielle')), 0) AS total_depense,
+        COALESCE(SUM(d.montant_total), 0) AS ca_devis,
+        COUNT(DISTINCT f.id) AS nb_factures,
+        COUNT(DISTINCT d.id) AS nb_devis,
+        COUNT(DISTINCT f.id) FILTER (WHERE f.statut = 'payee') AS nb_factures_payees,
+        COUNT(DISTINCT d.id) FILTER (WHERE d.statut = 'accepte') AS nb_devis_acceptes,
+        MAX(f.date_creation)::date AS derniere_facture
+    FROM public.clients c
+    LEFT JOIN public.factures f ON f.client_id = c.id AND f.user_id = p_user_id
+    LEFT JOIN public.devis    d ON d.client_id = c.id AND d.user_id = p_user_id
+    WHERE c.id = p_client_id AND c.user_id = p_user_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_client_stats(UUID, UUID) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_client_stats(UUID, UUID) FROM anon;
+
+
+-- ============================================================
+-- 16c. TRIGGER : Immuabilité des factures émises
+--     Une facture émise ne peut plus voir ses champs comptables
+--     modifiés (obligation légale FR) — seul le statut / paiement
+--     peuvent changer. Toute correction passe par un Avoir.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.prevent_facture_content_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+    IF OLD.montant_ht     IS DISTINCT FROM NEW.montant_ht     OR
+       OLD.montant_total  IS DISTINCT FROM NEW.montant_total  OR
+       OLD.client_id      IS DISTINCT FROM NEW.client_id      OR
+       OLD.numero         IS DISTINCT FROM NEW.numero         OR
+       OLD.avoir_de_facture_id IS DISTINCT FROM NEW.avoir_de_facture_id THEN
+        RAISE EXCEPTION 'Une facture émise ne peut pas être modifiée. Créez un Avoir.';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER trg_prevent_facture_content_change
+    BEFORE UPDATE ON public.factures
+    FOR EACH ROW EXECUTE FUNCTION public.prevent_facture_content_change();
 
 
 -- ============================================================
@@ -819,6 +977,35 @@ GRANT EXECUTE ON FUNCTION public.envoyer_relance(UUID, UUID) TO authenticated;
 -- Dashboard stats :
 -- SELECT public.get_dashboard_stats('<user-uuid>');
 -- ============================================================
+
+
+-- ============================================================
+-- 17. STORAGE : bucket pour logos & signatures
+--     Bucket public (lecture) pour affichage dans les PDF.
+--     Chaque utilisateur écrit uniquement dans son dossier
+--     <user_id>/... (policies basées sur storage.foldername).
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('parametres', 'parametres', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "proprio_upload_parametres_files" ON storage.objects
+    FOR INSERT WITH CHECK (
+        bucket_id = 'parametres' AND (storage.foldername(name))[1] = auth.uid()::text
+    );
+
+CREATE POLICY "proprio_update_parametres_files" ON storage.objects
+    FOR UPDATE USING (
+        bucket_id = 'parametres' AND (storage.foldername(name))[1] = auth.uid()::text
+    );
+
+CREATE POLICY "proprio_delete_parametres_files" ON storage.objects
+    FOR DELETE USING (
+        bucket_id = 'parametres' AND (storage.foldername(name))[1] = auth.uid()::text
+    );
+
+CREATE POLICY "public_read_parametres_files" ON storage.objects
+    FOR SELECT USING (bucket_id = 'parametres');
 
 
 -- ============================================================

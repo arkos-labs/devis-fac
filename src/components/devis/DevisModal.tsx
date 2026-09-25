@@ -81,7 +81,6 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
       const { data, error } = await supabase.from('clients').insert({
         user_id: user!.id,
         ...clientData,
-        statut: 'prospect'
       }).select('id, nom').single()
       if (error) throw error
       return data

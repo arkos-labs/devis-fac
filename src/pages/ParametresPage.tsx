@@ -7,6 +7,7 @@ import { Save, Building2, Star, FileText, Upload, Loader2, Plus, Trash2, Tag, Sh
 import toast from 'react-hot-toast'
 import { DEMO_PARAMETRES } from '@/lib/mockData'
 import { RemindersSection } from '@/components/RemindersSection'
+import { parseDecimal } from '@/lib/utils'
 
 // ── Types catalogue ───────────────────────────────────────────
 interface CatItem {
@@ -356,6 +357,9 @@ export default function ParametresPage() {
   })
 
   const [form, setForm] = useState<Partial<FormState>>({})
+  const [noteGoogleStr, setNoteGoogleStr] = useState('5')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingSignature, setUploadingSignature] = useState(false)
 
   useEffect(() => {
     if (params) {
@@ -372,8 +376,32 @@ export default function ParametresPage() {
         note_google: params.note_google,
         nombre_avis_google: params.nombre_avis_google,
       })
+      setNoteGoogleStr(String(params.note_google ?? 5).replace('.', ','))
     }
   }, [params])
+
+  const uploadFile = async (file: File, kind: 'logo' | 'signature') => {
+    if (!user) return
+    const setUploading = kind === 'logo' ? setUploadingLogo : setUploadingSignature
+    const formKey = kind === 'logo' ? 'logo_url' : 'signature_url'
+    setUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${user.id}/${kind}-${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('parametres')
+        .upload(path, file, { upsert: true, cacheControl: '3600' })
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage.from('parametres').getPublicUrl(path)
+      setForm(p => ({ ...p, [formKey]: data.publicUrl }))
+      toast.success(kind === 'logo' ? 'Logo uploadé ✓' : 'Signature uploadée ✓')
+    } catch (e) {
+      toast.error(`Erreur upload : ${(e as Error).message}`)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -454,25 +482,46 @@ export default function ParametresPage() {
       <Section icon={FileText} title="Documents (Devis & Factures PDF)">
         <div className="space-y-4">
           <div className="form-group">
-            <label className="label">URL Logo (stockage Supabase ou externe)</label>
-            <div className="flex gap-2">
-              <input className="input flex-1" placeholder="https://…/logo.png" {...f('logo_url')} />
-              <button className="btn-secondary btn-sm whitespace-nowrap">
-                <Upload size={13} /> Upload
-              </button>
+            <label className="label">Logo de l'entreprise</label>
+            <div className="flex items-center gap-3">
+              {form.logo_url && (
+                <img src={form.logo_url} alt="Logo" className="h-12 w-12 object-contain rounded-lg border border-slate-100 bg-white" />
+              )}
+              <label className="btn-secondary btn-sm whitespace-nowrap cursor-pointer">
+                {uploadingLogo ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                {uploadingLogo ? 'Envoi…' : (form.logo_url ? 'Changer le logo' : 'Choisir un logo')}
+                <input
+                  type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden" disabled={uploadingLogo}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadFile(file, 'logo')
+                    e.target.value = ''
+                  }}
+                />
+              </label>
             </div>
-            {form.logo_url && (
-              <img src={form.logo_url} alt="Logo" className="mt-2 h-12 object-contain rounded-lg border border-slate-100" />
-            )}
           </div>
 
           <div className="form-group">
-            <label className="label">URL Signature</label>
-            <div className="flex gap-2">
-              <input className="input flex-1" placeholder="https://…/signature.png" {...f('signature_url')} />
-              <button className="btn-secondary btn-sm whitespace-nowrap">
-                <Upload size={13} /> Upload
-              </button>
+            <label className="label">Signature</label>
+            <div className="flex items-center gap-3">
+              {form.signature_url && (
+                <img src={form.signature_url} alt="Signature" className="h-12 w-12 object-contain rounded-lg border border-slate-100 bg-white" />
+              )}
+              <label className="btn-secondary btn-sm whitespace-nowrap cursor-pointer">
+                {uploadingSignature ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                {uploadingSignature ? 'Envoi…' : (form.signature_url ? 'Changer la signature' : 'Choisir une signature')}
+                <input
+                  type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden" disabled={uploadingSignature}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) uploadFile(file, 'signature')
+                    e.target.value = ''
+                  }}
+                />
+              </label>
             </div>
           </div>
 
@@ -502,10 +551,17 @@ export default function ParametresPage() {
             <div className="form-group">
               <label className="label">Note (sur 5)</label>
               <input
-                type="number" min="0" max="5" step="0.1"
+                type="text" inputMode="decimal" placeholder="4,8"
                 className="input"
-                value={form.note_google ?? 5}
-                onChange={e => setForm(p => ({ ...p, note_google: parseFloat(e.target.value) }))}
+                value={noteGoogleStr}
+                onChange={e => {
+                  const raw = e.target.value
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(raw)) {
+                    setNoteGoogleStr(raw)
+                    const n = Math.min(5, Math.max(0, parseDecimal(raw)))
+                    setForm(p => ({ ...p, note_google: n }))
+                  }
+                }}
               />
             </div>
             <div className="form-group">

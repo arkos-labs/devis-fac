@@ -4,6 +4,13 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
 }
 
+// ── Nombres décimaux (accepte la virgule française) ──────────
+export function parseDecimal(value: string): number {
+  const normalized = value.replace(',', '.').trim()
+  const n = parseFloat(normalized)
+  return isNaN(n) ? 0 : n
+}
+
 // ── Formatage monétaire ──────────────────────────────────────
 export function formatEuros(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {
