@@ -15,8 +15,10 @@ interface DocumentPDFProps {
 }
 
 function renderStars(note: number): string {
-  const full  = Math.floor(note)
-  const half  = note - full >= 0.5 ? 1 : 0
+  const safeNote = Number(note) || 0
+  const clamped = Math.max(0, Math.min(5, safeNote))
+  const full  = Math.floor(clamped)
+  const half  = clamped - full >= 0.5 ? 1 : 0
   const empty = 5 - full - half
   return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(empty)
 }

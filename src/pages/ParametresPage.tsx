@@ -7,6 +7,7 @@ import { Save, Building2, Star, FileText, Upload, Loader2, Plus, Trash2, Tag, Sh
 import toast from 'react-hot-toast'
 import { DEMO_PARAMETRES } from '@/lib/mockData'
 import { RemindersSection } from '@/components/RemindersSection'
+import { formatStars } from '@/lib/utils'
 
 // ── Types catalogue ───────────────────────────────────────────
 interface CatItem {
@@ -520,8 +521,7 @@ export default function ParametresPage() {
             <div className="form-group flex flex-col justify-end">
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-center">
                 <p className="text-amber-500 text-lg tracking-wider">
-                  {'★'.repeat(Math.floor(form.note_google ?? 5))}
-                  {'☆'.repeat(5 - Math.floor(form.note_google ?? 5))}
+                  {formatStars(form.note_google ?? 5)}
                 </p>
                 <p className="text-xs text-amber-700 font-medium mt-0.5">
                   {form.note_google}/5 · {form.nombre_avis_google} avis

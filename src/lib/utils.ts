@@ -67,7 +67,9 @@ export function getInitiales(nom: string): string {
 
 // ── Étoiles Google ───────────────────────────────────────────
 export function formatStars(note: number): string {
-  const full = Math.floor(note)
+  const safeNote = Number(note) || 0
+  const clamped = Math.max(0, Math.min(5, safeNote))
+  const full = Math.floor(clamped)
   const stars = '★'.repeat(full) + '☆'.repeat(5 - full)
   return stars
 }
