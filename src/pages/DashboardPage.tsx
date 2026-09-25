@@ -692,12 +692,39 @@ export default function DashboardPage() {
     initialData: IS_DEMO ? DEMO_FACTURES.slice(0, 5) : undefined,
   })
 
-  const chartData = IS_DEMO ? DEMO_CHART : [
-    { mois: 'Oct', ca: 1200 }, { mois: 'Nov', ca: 1800 }, { mois: 'Déc', ca: 2200 },
-    { mois: 'Jan', ca: 1600 }, { mois: 'Fév', ca: 2400 }, { mois: 'Mar', ca: 3100 },
-    { mois: 'Avr', ca: 2800 }, { mois: 'Mai', ca: 3600 }, { mois: 'Juin', ca: 4200 },
-    { mois: 'Juil', ca: 3800 }, { mois: 'Août', ca: 4500 }, { mois: 'Sep', ca: 5200 },
-  ]
+  const { data: chartFactures = [] } = useQuery<Facture[]>({
+    queryKey: ['factures-chart', user?.id],
+    queryFn: async () => {
+      if (IS_DEMO) return DEMO_FACTURES
+      const d = new Date()
+      d.setFullYear(d.getFullYear() - 1)
+      const { data, error } = await supabase
+        .from('factures')
+        .select('statut, montant_total, date_creation')
+        .eq('user_id', user!.id)
+        .gte('date_creation', d.toISOString())
+      if (error) throw error
+      return (data ?? []) as unknown as Facture[]
+    },
+    enabled: !!user,
+  })
+
+  const chartData = IS_DEMO ? DEMO_CHART : (() => {
+    const data = []
+    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+    const now = new Date()
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const month = d.getMonth()
+      const year = d.getFullYear()
+      const ca = chartFactures.filter(f => {
+        const fDate = new Date(f.date_creation)
+        return f.statut === 'payee' && fDate.getMonth() === month && fDate.getFullYear() === year
+      }).reduce((sum, f) => sum + f.montant_total, 0)
+      data.push({ mois: monthNames[month], ca })
+    }
+    return data
+  })()
 
   const nbEnAttente = stats?.devis_en_attente ?? 0
 
