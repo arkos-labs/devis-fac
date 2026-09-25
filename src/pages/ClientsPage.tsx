@@ -151,43 +151,45 @@ export default function ClientsPage() {
         <div className="card overflow-hidden p-0">
           <div className="divide-y divide-slate-50">
             {filtered.map((c, i) => (
-              <div key={c.id} className="flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3 hover:bg-slate-50/70 transition-colors group">
-                {/* Avatar */}
-                <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl ${AVATAR_COLORS[i % AVATAR_COLORS.length]}
-                  flex items-center justify-center text-white font-bold text-[10px] md:text-xs flex-shrink-0`}>
-                  {getInitiales(c.nom)}
-                </div>
-
-                {/* Info principale */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs md:text-sm font-bold text-slate-800 truncate">{c.nom}</p>
-                  <div className="flex items-center gap-1.5 md:gap-3 mt-0.5 text-[10px] md:text-xs">
-                    {c.telephone && (
-                      <span className="flex items-center gap-0.5 text-slate-400 truncate">
-                        <Phone size={9} className="md:w-[10px]" /> <span className="hidden sm:inline">{c.telephone}</span>
-                      </span>
-                    )}
-                    {c.ville && (
-                      <span className="flex items-center gap-0.5 text-slate-400 truncate">
-                        <MapPin size={9} className="md:w-[10px]" /> {c.ville}
-                      </span>
-                    )}
-                    {c.email && (
-                      <span className="hidden md:flex items-center gap-0.5 text-slate-400 truncate">
-                        <Mail size={9} /> {c.email}
-                      </span>
-                    )}
+              <div key={c.id} className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 md:px-4 py-2.5 md:py-3 hover:bg-slate-50/70 transition-colors group">
+                {/* Avatar + Nom */}
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl ${AVATAR_COLORS[i % AVATAR_COLORS.length]}
+                    flex items-center justify-center text-white font-bold text-xs flex-shrink-0`}>
+                    {getInitiales(c.nom)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm md:text-base font-bold text-slate-800 truncate">{c.nom}</p>
                   </div>
                 </div>
 
+                {/* Info secondaires */}
+                <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                  {c.telephone && (
+                    <span className="flex items-center gap-1 text-slate-400">
+                      <Phone size={14} /> {c.telephone}
+                    </span>
+                  )}
+                  {c.ville && (
+                    <span className="flex items-center gap-1 text-slate-400">
+                      <MapPin size={14} /> {c.ville}
+                    </span>
+                  )}
+                  {c.email && (
+                    <span className="hidden md:flex items-center gap-1 text-slate-400">
+                      <Mail size={14} /> {c.email}
+                    </span>
+                  )}
+                </div>
+
                 {/* Actions */}
-                <div className="flex items-center gap-1 md:gap-1.5 opacity-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button onClick={() => navigate(`/clients/${c.id}`)}
-                    className="btn-sm btn-secondary text-[10px] md:text-xs px-2">
+                    className="btn-sm btn-secondary text-xs px-2.5">
                     Fiche
                   </button>
                   <button onClick={() => openEdit(c)}
-                    className="btn-sm btn-primary text-[10px] md:text-xs px-2">
+                    className="btn-sm btn-primary text-xs px-2.5">
                     Éditer
                   </button>
                 </div>
