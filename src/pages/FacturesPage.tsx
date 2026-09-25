@@ -203,7 +203,7 @@ export default function FacturesPage() {
         <Info size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-blue-700 leading-relaxed">
           <strong>Inaltérabilité :</strong> les factures émises ne peuvent pas être modifiées ni supprimées (loi anti-fraude TVA 2018).
-          Pour corriger une erreur, utilisez le bouton <strong>Avoir</strong> — cela génère une facture d'annulation en négatif et crée automatiquement un nouveau numéro séquentiel.
+          Pour corriger une erreur, utilisez le bouton <strong>Rembourser</strong> — cela génère une facture d'annulation en négatif et crée automatiquement un nouveau numéro séquentiel.
         </p>
       </div>
 
@@ -268,7 +268,7 @@ export default function FacturesPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-brand-700">{f.numero}</span>
                         {isAvoir && (
-                          <span className="badge badge-purple text-[10px]">AVOIR</span>
+                          <span className="badge badge-purple text-[10px]">REMBOURSÉ</span>
                         )}
                       </div>
                       {f.devis_id && (
@@ -326,7 +326,7 @@ export default function FacturesPage() {
                           <button title="Créer un Avoir (annulation légale)"
                             onClick={() => setAvoirTarget(f)}
                             className="btn-sm btn bg-violet-50 text-violet-700 hover:bg-violet-100 border-0 gap-1">
-                            <RotateCcw size={11} /> Avoir
+                            <RotateCcw size={11} /> Rembourser
                           </button>
                         )}
                       </div>
@@ -403,7 +403,7 @@ export default function FacturesPage() {
                 <RotateCcw className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-800">Annuler cette facture</h2>
+                <h2 className="font-bold text-slate-800">Rembourser / annuler cette facture</h2>
                 <p className="text-xs text-slate-400">{avoirTarget.numero}</p>
               </div>
             </div>
@@ -421,7 +421,7 @@ export default function FacturesPage() {
             {/* Détail technique light */}
             <div className="text-xs text-slate-500 mb-6 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
               <p className="font-semibold text-slate-600 mb-1">Techniquement :</p>
-              <p>Un Avoir = facture négative qui annule l'original. Les deux restent en historique (loi).</p>
+              <p>Un remboursement = facture négative qui annule l'original. Les deux restent en historique (loi).</p>
             </div>
 
             <div className="flex gap-3">

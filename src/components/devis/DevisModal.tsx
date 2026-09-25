@@ -6,7 +6,7 @@ import { formatEuros } from '@/lib/utils'
 import type { Client, IAPrestationItem } from '@/types/database'
 import {
   X, Plus, Zap, Loader2, ChevronDown,
-  Trash2, Tag, Check
+  Trash2, Tag, Check, Mail
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -28,6 +28,7 @@ export interface DevisFormData {
   client_id: string; date_validite: string
   notes_client: string; notes_internes: string
   genere_par_ia: boolean; prompt_ia: string
+  titre: string
 }
 
 interface CatItem {
@@ -61,12 +62,18 @@ const newRow = (partial?: Partial<PrestationRow>): PrestationRow => ({
   ...partial,
 })
 
+const dateIn30Days = () => {
+  const d = new Date()
+  d.setDate(d.getDate() + 30)
+  return d.toISOString().slice(0, 10)
+}
+
 export default function DevisModal({ editingNumero, onSave, onClose, isSaving }: Props) {
   const { user } = useAuth()
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
   const [form, setForm] = useState<DevisFormData>({
-    client_id: '', date_validite: '', notes_client: '',
-    notes_internes: '', genere_par_ia: false, prompt_ia: ''
+    client_id: '', date_validite: dateIn30Days(), notes_client: '',
+    notes_internes: '', genere_par_ia: false, prompt_ia: '', titre: ''
   })
   const [showIA, setShowIA] = useState(false)
   const [promptIA, setPromptIA] = useState('')
@@ -182,10 +189,9 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
       r.uid !== uid ? r : { ...r, options: r.options.filter((_, i) => i !== oi) }
     ))
 
-  // ── Total ─────────────────────────────────────────────────────
-  const total = rows.reduce((s, r) => {
-    return s + r.quantite * r.prix + r.options.reduce((os, o) => os + o.prix, 0)
-  }, 0)
+  const totalSansOptions = rows.reduce((s, r) => s + r.quantite * r.prix, 0)
+  const totalOptions = rows.reduce((s, r) => s + r.options.reduce((os, o) => os + o.prix, 0), 0)
+  const totalAvecOptions = totalSansOptions + totalOptions
 
   // ── Construire les lignes Supabase ────────────────────────────
   const toLignes = (): LigneForm[] => {
@@ -253,8 +259,20 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
 
   const handleSave = () => {
     if (!form.client_id) return toast.error('Sélectionnez un client')
-    if (!rows[0]?.description) return toast.error('Ajoutez au moins une prestation')
+    if (!form.titre.trim()) return toast.error('Ajoutez un titre au devis')
+    if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
     onSave(form, toLignes())
+  }
+
+  const handleSendEmail = () => {
+    const selectedClient = clients.find(c => c.id === form.client_id)
+    const email = selectedClient?.email || ''
+    if (!email) return toast.error("Ce client n'a pas d'email renseigné")
+    const total = totalAvecOptions
+    const subject = encodeURIComponent(`Devis — ${form.titre || 'Prestation nettoyage'}`)
+    const valDate = form.date_validite ? new Date(form.date_validite).toLocaleDateString('fr-FR') : '—'
+    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${form.titre || 'prestation nettoyage'}.\n\nMontant total : ${formatEuros(total)}\nValidité : jusqu'au ${valDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`)
   }
 
   return (
@@ -375,24 +393,42 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
               )}
             </div>
             <div className="form-group">
-              <label className="label">Validité</label>
+              <label className="label">Validité du devis</label>
               <input type="date" className="input" value={form.date_validite}
                 onChange={e => setForm(f => ({ ...f, date_validite: e.target.value }))} />
+              <p className="text-[10px] text-slate-400 mt-1">Par défaut : 30 jours à compter d'aujourd'hui</p>
             </div>
+          </div>
+
+          {/* ── Titre du devis ────────────────────────────────── */}
+          <div className="form-group">
+            <label className="label">Titre du devis *</label>
+            <input
+              className="input font-semibold text-base"
+              placeholder="Ex : Nettoyage de Diogène 45m² — Appartement Toulouse"
+              value={form.titre}
+              onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
+            />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Apparaitra en haut du devis et de la facture PDF
+            </p>
           </div>
 
           {/* ── Liste des prestations ────────────────────────── */}
           <div className="space-y-3">
-            <label className="label">Prestations *</label>
-
-            {rows.map((row) => {
+            <div>
+              <label className="label">Prestations incluses *</label>
+              <p className="text-[11px] text-slate-400 -mt-1">Numérotées dans l'ordre — listez tout ce qui est compris de base.</p>
+            </div>
+            {rows.map((row, rowIndex) => {
               const upsells = row.catalogueId ? upsellsOf(row.catalogueId) : []
-
               return (
                 <div key={row.uid} className="rounded-2xl border border-slate-200 overflow-hidden">
-
-                  {/* ─ Ligne principale ─ */}
-                  <div className="flex items-center gap-2 p-3">
+                  {/* ─ Ligne principale avec numéro ─ */}
+                  <div className="flex items-center gap-2 p-3 bg-slate-50/50">
+                    <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {rowIndex + 1}
+                    </span>
                     {/* Sélecteur catalogue OU saisie libre */}
                     {prestationsCatalogue.length > 0 && !row.catalogueId ? (
                       <div className="flex-1 relative">
@@ -531,13 +567,56 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
             </button>
           </div>
 
-          {/* ── Total ───────────────────────────────────────── */}
-          {total > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-brand-50 border border-brand-100">
-              <span className="text-sm font-bold text-brand-800">Total HT</span>
-              <span className="text-lg font-extrabold text-brand-800">{formatEuros(total)}</span>
+          {/* ── Section options / upsells libres ──────────────── */}
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/30 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Tag size={14} className="text-violet-600" />
+              <div>
+                <p className="text-sm font-bold text-violet-800">Options supplémentaires (upsells)</p>
+                <p className="text-[11px] text-violet-500">Augmentent le panier moyen : traitement anti-odeur, démoussage, protection hydrophobe, joints carrelage…</p>
+              </div>
+            </div>
+            {rows.flatMap(r =>
+              r.options.filter(o => !upsellsOf(r.catalogueId ?? '').some(u => u.nom === o.description)).map((o, _oi) => {
+                const realIdx = r.options.indexOf(o)
+                return (
+                  <div key={`${r.uid}-${realIdx}`} className="flex items-center gap-2">
+                    <Tag size={10} className="text-violet-400 flex-shrink-0" />
+                    <input value={o.description} onChange={e => updateOption(r.uid, realIdx, 'description', e.target.value)}
+                      placeholder="Nom de l'option (ex : Traitement anti-odeur)" className="input flex-1 text-xs py-1.5" />
+                    <input type="number" value={o.prix} onChange={e => updateOption(r.uid, realIdx, 'prix', +e.target.value)}
+                      placeholder="€" className="input w-20 text-xs py-1.5 text-right" />
+                    <button onClick={() => removeOption(r.uid, realIdx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors"><X size={12} /></button>
+                  </div>
+                )
+              })
+            )}
+            <button onClick={() => setRows(rs => { const up = [...rs]; up[up.length-1].options = [...up[up.length-1].options, { description: '', prix: 0 }]; return [...up] })}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-600 hover:text-violet-800 transition-colors">
+              <Plus size={12} /> Ajouter une option libre
+            </button>
+          </div>
+
+          {/* ── Double total ──────────────────────────────────── */}
+          {totalSansOptions > 0 && (
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                <span className="text-sm text-slate-500">Total de base (sans options)</span>
+                <span className="text-base font-bold text-slate-700">{formatEuros(totalSansOptions)}</span>
+              </div>
+              {totalOptions > 0 && (
+                <div className="flex items-center justify-between px-4 py-2 bg-violet-50/50 border-b border-violet-100">
+                  <span className="text-xs text-violet-600 font-medium">+ Options supplémentaires</span>
+                  <span className="text-sm font-bold text-violet-700">+{formatEuros(totalOptions)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between px-4 py-3 bg-brand-50">
+                <span className="text-sm font-bold text-brand-800">Total avec options</span>
+                <span className="text-lg font-extrabold text-brand-800">{formatEuros(totalAvecOptions)}</span>
+              </div>
             </div>
           )}
+
 
           {/* ── Notes ───────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
@@ -560,12 +639,17 @@ export default function DevisModal({ editingNumero, onSave, onClose, isSaving }:
           {/* ── Actions ─────────────────────────────────────── */}
           <div className="flex gap-3">
             <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
+            {form.client_id && (
+              <button onClick={handleSendEmail} className="btn bg-blue-50 text-blue-700 hover:bg-blue-100 gap-1.5 px-3" title="Envoyer par email">
+                <Mail size={14} />
+              </button>
+            )}
             <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 gap-1.5">
               {isSaving
                 ? <><Loader2 size={13} className="animate-spin" /> Enregistrement…</>
                 : editingNumero
                   ? 'Mettre à jour'
-                  : `Créer${total > 0 ? ' — ' + formatEuros(total) : ''}`
+                  : `Créer${totalAvecOptions > 0 ? ' — ' + formatEuros(totalAvecOptions) : ''}`
               }
             </button>
           </div>

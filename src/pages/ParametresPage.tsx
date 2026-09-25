@@ -376,6 +376,26 @@ export default function ParametresPage() {
     }
   }, [params])
 
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingSig, setUploadingSig] = useState(false)
+
+  const uploadFile = async (file: File, bucket: string, field: 'logo_url' | 'signature_url', setLoading: (v: boolean) => void) => {
+    setLoading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${user!.id}/${field}.${ext}`
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+      setForm(p => ({ ...p, [field]: data.publicUrl + '?t=' + Date.now() }))
+      toast.success('Image chargée !')
+    } catch (e) {
+      toast.error(`Upload échoué : ${(e as Error).message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -455,12 +475,15 @@ export default function ParametresPage() {
       <Section icon={FileText} title="Documents (Devis & Factures PDF)">
         <div className="space-y-4">
           <div className="form-group">
-            <label className="label">URL Logo (stockage Supabase ou externe)</label>
-            <div className="flex gap-2">
+            <label className="label">Logo de l'entreprise</label>
+            <div className="flex gap-2 items-center">
               <input className="input flex-1" placeholder="https://…/logo.png" {...f('logo_url')} />
-              <button className="btn-secondary btn-sm whitespace-nowrap">
-                <Upload size={13} /> Upload
-              </button>
+              <label className={`btn-secondary btn-sm whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${uploadingLogo ? 'opacity-60' : ''}`}>
+                {uploadingLogo ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                Upload
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'logos', 'logo_url', setUploadingLogo) }} />
+              </label>
             </div>
             {form.logo_url && (
               <img src={form.logo_url} alt="Logo" className="mt-2 h-12 object-contain rounded-lg border border-slate-100" />
@@ -468,13 +491,19 @@ export default function ParametresPage() {
           </div>
 
           <div className="form-group">
-            <label className="label">URL Signature</label>
-            <div className="flex gap-2">
+            <label className="label">Signature du prestataire</label>
+            <div className="flex gap-2 items-center">
               <input className="input flex-1" placeholder="https://…/signature.png" {...f('signature_url')} />
-              <button className="btn-secondary btn-sm whitespace-nowrap">
-                <Upload size={13} /> Upload
-              </button>
+              <label className={`btn-secondary btn-sm whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${uploadingSig ? 'opacity-60' : ''}`}>
+                {uploadingSig ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                Upload
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={e => { const fi = e.target.files?.[0]; if (fi) uploadFile(fi, 'signatures', 'signature_url', setUploadingSig) }} />
+              </label>
             </div>
+            {form.signature_url && (
+              <img src={form.signature_url} alt="Signature" className="mt-2 h-12 object-contain rounded-lg border border-slate-100" />
+            )}
           </div>
 
           <div className="form-group">

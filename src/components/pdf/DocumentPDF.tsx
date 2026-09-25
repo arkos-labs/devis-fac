@@ -59,6 +59,9 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
             <div className="text-2xl font-bold text-neutral-900 mb-5">{parametres.nom_entreprise}</div>
           )}
           <h1 className="text-4xl font-light text-neutral-900 tracking-widest uppercase">{titre}</h1>
+          {(document as any).titre && (
+            <p className="text-lg font-semibold text-neutral-700 mt-2">{(document as any).titre}</p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-neutral-500 text-sm mb-1">{titre} N° <span className="font-medium text-neutral-900">{document.numero}</span></p>
