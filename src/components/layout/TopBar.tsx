@@ -20,7 +20,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
   const meta = isClientDetail
     ? { title: 'Fiche client', icon: UserRound, sub: 'Historique & documents' }
-    : PAGE_META[pathname] ?? { title: 'Clean&Fresh', icon: BarChart2, sub: '' }
+    : PAGE_META[pathname] ?? { title: 'CRM Pro', icon: BarChart2, sub: '' }
 
   const PageIcon = meta.icon
   const initials = user?.email?.[0]?.toUpperCase() ?? 'A'

@@ -122,6 +122,37 @@ export interface DashboardStats {
   total_clients: number
 }
 
+// ── configuration_relances ──────────────────────────────
+export interface ConfigurationRelances {
+  id: string
+  user_id: string
+  mois_sans_activite: number
+  message_relance: string
+  actif: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ── relances_historique ──────────────────────────────────
+export interface RelanceHistorique {
+  id: string
+  user_id: string
+  client_id: string
+  date_relance: string
+  message: string
+  type_relance: 'email' | 'sms' | 'notification'
+  created_at: string
+}
+
+// ── Client à relancer ────────────────────────────────────
+export interface ClientARelancer {
+  client_id: string
+  nom_client: string
+  email_client: string | null
+  mois_depuis_activite: number
+  dernier_contact: string | null
+}
+
 // ── IA Response ──────────────────────────────────────────────
 export interface IAPrestationItem {
   description: string
@@ -141,16 +172,20 @@ export interface IADevisResponse {
 export type Database = {
   public: {
     Tables: {
-      parametres_compte: { Row: ParametresCompte; Insert: Partial<ParametresCompte>; Update: Partial<ParametresCompte> }
-      clients:           { Row: Client;            Insert: Partial<Client>;            Update: Partial<Client> }
-      devis:             { Row: Devis;             Insert: Partial<Devis>;             Update: Partial<Devis> }
-      factures:          { Row: Facture;           Insert: Partial<Facture>;           Update: Partial<Facture> }
-      lignes_prestation: { Row: LignePrestation;   Insert: Partial<LignePrestation>;   Update: Partial<LignePrestation> }
+      parametres_compte:        { Row: ParametresCompte;        Insert: Partial<ParametresCompte>;        Update: Partial<ParametresCompte> }
+      clients:                  { Row: Client;                  Insert: Partial<Client>;                  Update: Partial<Client> }
+      devis:                    { Row: Devis;                   Insert: Partial<Devis>;                   Update: Partial<Devis> }
+      factures:                 { Row: Facture;                 Insert: Partial<Facture>;                 Update: Partial<Facture> }
+      lignes_prestation:        { Row: LignePrestation;         Insert: Partial<LignePrestation>;         Update: Partial<LignePrestation> }
+      configuration_relances:   { Row: ConfigurationRelances;   Insert: Partial<ConfigurationRelances>;   Update: Partial<ConfigurationRelances> }
+      relances_historique:      { Row: RelanceHistorique;       Insert: Partial<RelanceHistorique>;       Update: Partial<RelanceHistorique> }
     }
     Functions: {
       get_next_numero:              { Args: { p_user_id: string; p_type: string }; Returns: string }
       convertir_devis_en_facture:   { Args: { p_devis_id: string; p_user_id: string }; Returns: string }
       get_dashboard_stats:          { Args: { p_user_id: string }; Returns: DashboardStats }
+      get_clients_a_relancer:       { Args: { p_user_id: string }; Returns: ClientARelancer[] }
+      envoyer_relance:              { Args: { p_user_id: string; p_client_id: string }; Returns: Record<string, any> }
     }
   }
 }

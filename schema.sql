@@ -146,7 +146,50 @@ COMMENT ON TABLE public.factures IS 'Factures avec numérotation stricte, suivi 
 
 
 -- ============================================================
--- 5. TABLE : lignes_prestation
+-- 5. TABLE : configuration_relances
+--    Configuration des relances automatiques par utilisateur
+--    Permet chaque user de configurer les triggers de relance
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.configuration_relances (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    mois_sans_activite INT NOT NULL DEFAULT 6,  -- Ex: 6 mois
+    message_relance TEXT NOT NULL DEFAULT 'Bonjour, nous aimerions renouveler notre collaboration. N''hésitez pas à nous recontacter.',
+    actif           BOOLEAN NOT NULL DEFAULT true,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Un seul enregistrement par utilisateur
+    CONSTRAINT uq_config_relances_user UNIQUE (user_id)
+);
+
+COMMENT ON TABLE public.configuration_relances IS 'Configuration des relances automatiques (délai, message).';
+
+CREATE INDEX IF NOT EXISTS idx_config_relances_user_id ON public.configuration_relances(user_id);
+
+
+-- ============================================================
+-- 5b. TABLE : relances_historique
+--     Track des relances envoyées pour éviter les doublons
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.relances_historique (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    client_id       UUID NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+    date_relance    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    message         TEXT NOT NULL,
+    type_relance    TEXT NOT NULL DEFAULT 'email' CHECK (type_relance IN ('email', 'sms', 'notification')),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.relances_historique IS 'Historique des relances envoyées pour chaque client.';
+
+CREATE INDEX IF NOT EXISTS idx_relances_user_id    ON public.relances_historique(user_id);
+CREATE INDEX IF NOT EXISTS idx_relances_client_id  ON public.relances_historique(client_id);
+CREATE INDEX IF NOT EXISTS idx_relances_date       ON public.relances_historique(user_id, date_relance DESC);
+
+
+-- ============================================================
+-- 6. TABLE : lignes_prestation
 --    Lignes de détail pour DEVIS et FACTURES
 --    On utilise une colonne discriminante (document_type)
 --    pour pointer vers la bonne table parente.
@@ -175,7 +218,7 @@ COMMENT ON TABLE public.lignes_prestation IS 'Lignes de prestation pour devis et
 
 
 -- ============================================================
--- 6. TRIGGERS : updated_at automatique
+-- 7. TRIGGERS : updated_at automatique
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER
@@ -202,7 +245,7 @@ CREATE OR REPLACE TRIGGER trg_parametres_updated_at
 
 
 -- ============================================================
--- 7. TRIGGER : Synchronisation montant_total sur devis/facture
+-- 8. TRIGGER : Synchronisation montant_total sur devis/facture
 --    Recalcule automatiquement le montant_total du document
 --    quand une ligne est insérée, modifiée ou supprimée.
 -- ============================================================
@@ -252,7 +295,7 @@ CREATE OR REPLACE TRIGGER trg_sync_montant_devis_facture
 
 
 -- ============================================================
--- 8. FONCTION CRITIQUE : Numérotation stricte sans doublon
+-- 9. FONCTION CRITIQUE : Numérotation stricte sans doublon
 --    Utilise un verrou consultatif PostgreSQL (advisory lock)
 --    pour garantir l'atomicité même en cas de requêtes concurrentes.
 --    Retourne le prochain numéro formaté et l'incrémente.
@@ -323,7 +366,7 @@ l''absence de doublon même sous haute concurrence. Doit être appelé dans une 
 
 
 -- ============================================================
--- 9. FONCTION : Conversion devis → facture (1 clic)
+-- 10. FONCTION : Conversion devis → facture (1 clic)
 --    Crée une facture complète depuis un devis.
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.convertir_devis_en_facture(
@@ -404,7 +447,7 @@ lie la facture au devis source.';
 
 
 -- ============================================================
--- 10. FONCTION : Statistiques Dashboard
+-- 11. FONCTION : Statistiques Dashboard
 --     Retourne les KPIs agrégés pour le dashboard.
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.get_dashboard_stats(p_user_id UUID)
@@ -476,24 +519,28 @@ $$;
 
 
 -- ============================================================
--- 11. ROW LEVEL SECURITY (RLS)
+-- 12. ROW LEVEL SECURITY (RLS)
 --     Politique : chaque user ne voit QUE ses propres données.
 --     L'admin Supabase (service_role) bypasse toutes les RLS.
 -- ============================================================
 
 -- Activer RLS sur toutes les tables
-ALTER TABLE public.parametres_compte    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.clients              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.devis                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.factures             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.lignes_prestation    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.parametres_compte        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.devis                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.factures                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lignes_prestation        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.configuration_relances   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.relances_historique      ENABLE ROW LEVEL SECURITY;
 
 -- Forcer RLS même pour le propriétaire de la table (sécurité maximale)
-ALTER TABLE public.parametres_compte    FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.clients              FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.devis                FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.factures             FORCE ROW LEVEL SECURITY;
-ALTER TABLE public.lignes_prestation    FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.parametres_compte        FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.clients                  FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.devis                    FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.factures                 FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.lignes_prestation        FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.configuration_relances   FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.relances_historique      FORCE ROW LEVEL SECURITY;
 
 -- ── parametres_compte ──────────────────────────────────────
 CREATE POLICY "proprio_select_parametres" ON public.parametres_compte
@@ -560,9 +607,35 @@ CREATE POLICY "proprio_update_lignes" ON public.lignes_prestation
 CREATE POLICY "proprio_delete_lignes" ON public.lignes_prestation
     FOR DELETE USING (auth.uid() = user_id);
 
+-- ── configuration_relances ────────────────────────────────
+CREATE POLICY "proprio_select_config_relances" ON public.configuration_relances
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "proprio_insert_config_relances" ON public.configuration_relances
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "proprio_update_config_relances" ON public.configuration_relances
+    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "proprio_delete_config_relances" ON public.configuration_relances
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- ── relances_historique ───────────────────────────────────
+CREATE POLICY "proprio_select_relances_histo" ON public.relances_historique
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "proprio_insert_relances_histo" ON public.relances_historique
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "proprio_update_relances_histo" ON public.relances_historique
+    FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "proprio_delete_relances_histo" ON public.relances_historique
+    FOR DELETE USING (auth.uid() = user_id);
+
 
 -- ============================================================
--- 12. TRIGGER : Création automatique des paramètres compte
+-- 13. TRIGGER : Création automatique des paramètres compte
 --     Quand un nouvel utilisateur s'inscrit via Supabase Auth,
 --     on initialise automatiquement son enregistrement.
 -- ============================================================
@@ -579,6 +652,11 @@ BEGIN
         COALESCE(NEW.raw_user_meta_data->>'nom_entreprise', 'Mon Entreprise')
     )
     ON CONFLICT (user_id) DO NOTHING;
+
+    INSERT INTO public.configuration_relances (user_id)
+    VALUES (NEW.id)
+    ON CONFLICT (user_id) DO NOTHING;
+
     RETURN NEW;
 END;
 $$;
@@ -590,7 +668,7 @@ CREATE OR REPLACE TRIGGER trg_on_new_user_signup
 
 
 -- ============================================================
--- 13. GRANTS (Sécurité)
+-- 14. GRANTS (Sécurité)
 --     On révoque tout accès public par défaut,
 --     puis on accorde uniquement à authenticated.
 -- ============================================================
@@ -598,11 +676,13 @@ REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon;
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM public;
 
 GRANT USAGE ON SCHEMA public TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.parametres_compte   TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.clients             TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.devis               TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.factures            TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.lignes_prestation   TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.parametres_compte         TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.clients                   TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.devis                     TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.factures                  TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.lignes_prestation         TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.configuration_relances    TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.relances_historique       TO authenticated;
 
 -- Accorder l'exécution des fonctions sécurisées
 GRANT EXECUTE ON FUNCTION public.get_next_numero(UUID, TEXT)             TO authenticated;
@@ -611,7 +691,118 @@ GRANT EXECUTE ON FUNCTION public.get_dashboard_stats(UUID)               TO auth
 
 
 -- ============================================================
--- 14. TESTS RAPIDES (commenter en production)
+-- 15. FONCTION : Trouver les clients à relancer
+--     Retourne les clients sans activité depuis X mois
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_clients_a_relancer(p_user_id UUID)
+RETURNS TABLE (
+    client_id UUID,
+    nom_client TEXT,
+    email_client TEXT,
+    mois_depuis_activite INT,
+    dernier_contact TIMESTAMPTZ
+) LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_mois_config INT;
+BEGIN
+    -- Récupérer la configuration de l'utilisateur
+    SELECT mois_sans_activite INTO v_mois_config
+    FROM public.configuration_relances
+    WHERE user_id = p_user_id AND actif = true;
+
+    IF v_mois_config IS NULL THEN
+        v_mois_config := 6; -- Valeur par défaut
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        c.id,
+        c.nom,
+        c.email,
+        EXTRACT(EPOCH FROM (now() - COALESCE(c.dernier_contact, c.date_creation))) / (86400 * 30)::INT AS mois,
+        c.dernier_contact
+    FROM public.clients c
+    WHERE c.user_id = p_user_id
+      AND (c.dernier_contact IS NULL OR
+           EXTRACT(EPOCH FROM (now() - c.dernier_contact)) / (86400 * 30) >= v_mois_config)
+      -- Vérifier qu'il n'y a pas de relance envoyée dans les 30 derniers jours
+      AND NOT EXISTS (
+          SELECT 1 FROM public.relances_historique rh
+          WHERE rh.client_id = c.id
+            AND rh.user_id = p_user_id
+            AND rh.date_relance > now() - INTERVAL '30 days'
+      );
+END;
+$$;
+
+COMMENT ON FUNCTION public.get_clients_a_relancer IS 'Retourne les clients sans activité depuis X mois (configurable).';
+
+GRANT EXECUTE ON FUNCTION public.get_clients_a_relancer(UUID) TO authenticated;
+
+
+-- ============================================================
+-- 16. FONCTION : Envoyer une relance à un client
+--     Enregistre la relance et met à jour dernier_contact
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.envoyer_relance(
+    p_user_id UUID,
+    p_client_id UUID
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_client RECORD;
+    v_config RECORD;
+    v_relance_id UUID;
+    v_result JSON;
+BEGIN
+    -- Vérifier les droits
+    SELECT * INTO v_client FROM public.clients
+    WHERE id = p_client_id AND user_id = p_user_id;
+
+    IF NOT FOUND THEN
+        RETURN json_build_object('success', false, 'error', 'Client introuvable');
+    END IF;
+
+    -- Récupérer la configuration de relance
+    SELECT * INTO v_config FROM public.configuration_relances
+    WHERE user_id = p_user_id;
+
+    -- Enregistrer la relance
+    INSERT INTO public.relances_historique (user_id, client_id, message, type_relance)
+    VALUES (p_user_id, p_client_id, v_config.message_relance, 'email')
+    RETURNING id INTO v_relance_id;
+
+    -- Mettre à jour dernier_contact du client
+    UPDATE public.clients
+    SET dernier_contact = now()
+    WHERE id = p_client_id;
+
+    v_result := json_build_object(
+        'success', true,
+        'message', 'Relance envoyée avec succès',
+        'relance_id', v_relance_id,
+        'client_nom', v_client.nom,
+        'client_email', v_client.email
+    );
+
+    RETURN v_result;
+END;
+$$;
+
+COMMENT ON FUNCTION public.envoyer_relance IS 'Envoie une relance à un client et enregistre l''action.';
+
+GRANT EXECUTE ON FUNCTION public.envoyer_relance(UUID, UUID) TO authenticated;
+
+
+-- ============================================================
+-- 15. TESTS RAPIDES (commenter en production)
 -- ============================================================
 -- Après inscription, tester la numérotation :
 --

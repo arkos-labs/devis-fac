@@ -376,7 +376,7 @@ export default function SignupPage() {
                       <input
                         id="nom" type="text" required
                         value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)}
-                        placeholder="Clean&Fresh"
+                        placeholder="Mon Entreprise"
                         className={error ? 'input-error' : 'input'}
                       />
                     </div>
@@ -408,7 +408,7 @@ export default function SignupPage() {
                         <input
                           id="email-ent" type="email"
                           value={emailEntreprise} onChange={e => setEmailEntreprise(e.target.value)}
-                          placeholder="contact@clean.fr"
+                          placeholder="contact@entreprise.fr"
                           className="input"
                         />
                       </div>

@@ -41,5 +41,15 @@ export default defineConfig({
   ],
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') }
+  },
+  server: {
+    // Exclure les dossiers d'outils externes du watcher pour éviter EBUSY
+    watch: {
+      ignored: [
+        '**/.claude/**',
+        '**/node_modules/**',
+        '**/.git/**',
+      ]
+    }
   }
 })

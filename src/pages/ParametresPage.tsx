@@ -6,6 +6,7 @@ import type { ParametresCompte } from '@/types/database'
 import { Save, Building2, Star, FileText, Upload, Loader2, Plus, Trash2, Tag, ShoppingBag, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { DEMO_PARAMETRES } from '@/lib/mockData'
+import { RemindersSection } from '@/components/RemindersSection'
 
 // ── Types catalogue ───────────────────────────────────────────
 interface CatItem {
@@ -558,6 +559,9 @@ export default function ParametresPage() {
       <Section icon={ShoppingBag} title="Catalogue de prestations">
         <CatalogueSection />
       </Section>
+
+      {/* ── Relances automatiques ────────────────────────── */}
+      <RemindersSection />
 
       {/* ── Numérotation ─────────────────────────────────── */}
       {params && (
