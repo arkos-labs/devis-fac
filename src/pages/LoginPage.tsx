@@ -296,9 +296,7 @@ export default function LoginPage() {
               <p className="text-xs text-center text-slate-400 mt-5 font-medium">
                 Pas encore de compte ? <Link to="/signup" className="text-brand-600 font-semibold hover:text-brand-800">Créer un compte</Link>
               </p>
-              <p className="text-xs text-center text-slate-400 mt-3 font-medium">
-                SIRET : 99039012200028 — Auto-entrepreneur
-              </p>
+
             </div>
           )}
         </div>
