@@ -225,7 +225,7 @@ export default function ClientDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('relances_historique').select('*').eq('client_id', id!).eq('user_id', user!.id)
-        .order('date_envoi', { ascending: false })
+        .order('date_relance', { ascending: false })
       if (error) throw error
       return (data ?? []) as any[]
     },
@@ -517,7 +517,7 @@ export default function ClientDetailPage() {
                 })),
                 ...remindersList.map(r => ({
                   type: 'reminder',
-                  date: r.date_envoi,
+                  date: r.date_relance,
                   label: 'Relance envoyée',
                   sub: r.message || 'Relance client',
                   icon: <Bell size={16} className="text-amber-600" />,
