@@ -28,8 +28,15 @@ function ensureSpace(ctx: Ctx, needed: number) {
   if (ctx.y - needed < MARGIN) newPage(ctx)
 }
 
+// La police standard (WinAnsi) ne couvre que Latin-1 : on retire les emojis/symboles
+// exotiques que des champs libres (notes, mentions légales...) pourraient contenir,
+// plutôt que de planter la génération du PDF.
+function sanitizeForPdf(str: string): string {
+  return Array.from(str).map(ch => (ch.codePointAt(0)! <= 0xff ? ch : '')).join('')
+}
+
 function text(ctx: Ctx, str: string, x: number, size = 10, bold = false, color = rgb(0.1, 0.1, 0.12)) {
-  ctx.page.drawText(str, { x, y: ctx.y, size, font: bold ? ctx.fontBold : ctx.font, color })
+  ctx.page.drawText(sanitizeForPdf(str), { x, y: ctx.y, size, font: bold ? ctx.fontBold : ctx.font, color })
 }
 
 function line(ctx: Ctx, x1: number, x2: number, color = rgb(0.85, 0.85, 0.87)) {
@@ -206,11 +213,21 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
     const docAvisNote = (document as unknown as { note_google_snapshot?: number }).note_google_snapshot ?? parametres.note_google ?? 5
     const docAvisCount = (document as unknown as { nombre_avis_google_snapshot?: number }).nombre_avis_google_snapshot ?? parametres.nombre_avis_google ?? 0
     const centerX = PAGE_W / 2
-    const stars = '★'.repeat(Math.round(Number(docAvisNote) || 0))
+    const filledStars = Math.round(Number(docAvisNote) || 0)
     text(ctx, 'Avis Google', centerX - 40, 11, true, rgb(0.2, 0.2, 0.25))
-    ctx.y -= 16
-    text(ctx, stars, centerX - 40, 12, false, rgb(0.96, 0.62, 0.04))
-    ctx.y -= 16
+    ctx.y -= 18
+    const starRadius = 5
+    const starGap = 14
+    const starsStartX = centerX - 40
+    for (let i = 0; i < 5; i++) {
+      ctx.page.drawCircle({
+        x: starsStartX + i * starGap + starRadius,
+        y: ctx.y,
+        size: starRadius,
+        color: i < filledStars ? rgb(0.96, 0.62, 0.04) : rgb(0.88, 0.88, 0.9),
+      })
+    }
+    ctx.y -= 18
     text(ctx, `${docAvisNote}/5 sur ${docAvisCount} avis`, centerX - 40, 9, false, rgb(0.4, 0.4, 0.45))
     ctx.y -= 16
     if (parametres.avis_google_url) {
