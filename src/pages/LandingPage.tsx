@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Sparkles, CheckCircle2, ArrowRight, Zap, Shield, FileText, BarChart3 } from 'lucide-react'
+import { Sparkles, CheckCircle2, ArrowRight, Zap, Shield, FileText } from 'lucide-react'
 
 export default function LandingPage() {
   return (
