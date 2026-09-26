@@ -36,6 +36,7 @@ export const DEMO_PARAMETRES: ParametresCompte = {
 export const DEMO_CLIENTS: Client[] = [
   {
     id: 'client-001', user_id: DEMO_USER_ID,
+    type_client: 'particulier', nom_entreprise: null, siret: null, tva_intracommunautaire: null,
     nom: 'Marie Dupont', email: 'marie.dupont@gmail.com',
     telephone: '06 11 22 33 44',
     adresse: '12 rue de la Paix', ville: 'Paris', code_postal: '75001',
@@ -44,14 +45,16 @@ export const DEMO_CLIENTS: Client[] = [
   },
   {
     id: 'client-002', user_id: DEMO_USER_ID,
-    nom: 'Cabinet Martin & Associés', email: 'contact@martin-avocats.fr',
+    type_client: 'professionnel', nom_entreprise: 'Cabinet Martin & Associés', siret: '12345678900012', tva_intracommunautaire: 'FR12123456789',
+    nom: 'Jean-Pierre Martin', email: 'contact@martin-avocats.fr',
     telephone: '01 42 33 44 55',
     adresse: '45 boulevard Haussmann', ville: 'Paris', code_postal: '75008',
-    notes: 'Bureau 3 étages. Nettoyage mensuel. Contact : Jean-Pierre Martin.',
+    notes: 'Bureau 3 étages. Nettoyage mensuel.',
     date_creation: '2024-05-02T14:00:00Z', dernier_contact: '2026-09-01T08:30:00Z',
   },
   {
     id: 'client-003', user_id: DEMO_USER_ID,
+    type_client: 'particulier', nom_entreprise: null, siret: null, tva_intracommunautaire: null,
     nom: 'Sophie & Thomas Renard', email: 'renard.famille@orange.fr',
     telephone: '06 55 66 77 88',
     adresse: '8 allée des Roses', ville: 'Versailles', code_postal: '78000',
@@ -60,7 +63,8 @@ export const DEMO_CLIENTS: Client[] = [
   },
   {
     id: 'client-004', user_id: DEMO_USER_ID,
-    nom: 'Restaurant Le Gourmet', email: 'direction@legourmet.fr',
+    type_client: 'professionnel', nom_entreprise: 'Restaurant Le Gourmet', siret: '98765432100098', tva_intracommunautaire: 'FR98987654321',
+    nom: 'Direction', email: 'direction@legourmet.fr',
     telephone: '01 48 12 34 56',
     adresse: '22 rue du Faubourg', ville: 'Neuilly-sur-Seine', code_postal: '92200',
     notes: 'Nettoyage cuisine professionnelle hebdomadaire.',
@@ -68,6 +72,7 @@ export const DEMO_CLIENTS: Client[] = [
   },
   {
     id: 'client-005', user_id: DEMO_USER_ID,
+    type_client: 'particulier', nom_entreprise: null, siret: null, tva_intracommunautaire: null,
     nom: 'Isabelle Moreau', email: 'isabelle.moreau@free.fr',
     telephone: '07 98 76 54 32',
     adresse: '3 impasse du Moulin', ville: 'Boulogne-Billancourt', code_postal: '92100',
@@ -76,7 +81,8 @@ export const DEMO_CLIENTS: Client[] = [
   },
   {
     id: 'client-006', user_id: DEMO_USER_ID,
-    nom: 'SCI Les Pins Dorés', email: 'gestion@scilespins.fr',
+    type_client: 'professionnel', nom_entreprise: 'SCI Les Pins Dorés', siret: '55555555500055', tva_intracommunautaire: 'FR55555555555',
+    nom: 'Gestion', email: 'gestion@scilespins.fr',
     telephone: '01 39 45 67 89',
     adresse: '100 avenue du Général de Gaulle', ville: 'Saint-Cloud', code_postal: '92210',
     notes: 'Immeuble 6 appartements. Contrat annuel parties communes.',
