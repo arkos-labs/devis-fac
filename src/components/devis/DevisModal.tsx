@@ -161,7 +161,7 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
     queryKey: ['clients', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('clients').select('id, nom').eq('user_id', user!.id).order('nom')
+        .from('clients').select('id, nom, email').eq('user_id', user!.id).order('nom')
       if (error) throw error
       return (data ?? []) as Client[]
     },
@@ -308,24 +308,23 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
     }
   }
 
-  const handleSave = () => {
-    if (!isSubscribed) return toast.error('Abonnez-vous pour créer un devis')
-    if (!form.client_id) return toast.error('Sélectionnez un client')
-    if (!form.titre.trim()) return toast.error('Ajoutez un titre au devis')
-    if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
-    onSave(form, toLignes())
-  }
+  const selectedClientEmail = clients.find(c => c.id === form.client_id)?.email || ''
 
-  const handleSendEmail = () => {
-    if (!isSubscribed) return toast.error('Abonnez-vous pour envoyer un devis')
-    const selectedClient = clients.find(c => c.id === form.client_id)
-    const email = selectedClient?.email || ''
-    if (!email) return toast.error("Ce client n'a pas d'email renseigné")
+  const sendEmail = () => {
     const total = totalAvecOptions
     const subject = encodeURIComponent(`Devis — ${form.titre || 'prestation'}`)
     const valDate = form.date_validite ? new Date(form.date_validite).toLocaleDateString('fr-FR') : '—'
     const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${form.titre || 'prestation'}.\n\nMontant total : ${formatEuros(total)}\nValidité : jusqu'au ${valDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
-    window.open(`mailto:${email}?subject=${subject}&body=${body}`)
+    window.open(`mailto:${selectedClientEmail}?subject=${subject}&body=${body}`)
+  }
+
+  const handleSave = () => {
+    if (!isSubscribed) return toast.error(`Abonnez-vous pour ${editingDevis ? 'modifier' : 'créer'} un devis`)
+    if (!form.client_id) return toast.error('Sélectionnez un client')
+    if (!form.titre.trim()) return toast.error('Ajoutez un titre au devis')
+    if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
+    if (!editingDevis && selectedClientEmail) sendEmail()
+    onSave(form, toLignes())
   }
 
   return (
@@ -676,26 +675,18 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
         <div className="shrink-0 border-t border-slate-100 p-5 space-y-2 bg-white">
           <div className="flex gap-3">
             <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
-            {form.client_id && (
-              <button
-                onClick={handleSendEmail}
-                disabled={!isSubscribed}
-                className="btn bg-blue-50 text-blue-700 hover:bg-blue-100 gap-1.5 px-3 disabled:opacity-40"
-                title={isSubscribed ? 'Envoyer par email' : 'Abonnement requis pour envoyer'}
-              >
-                <Mail size={14} />
-              </button>
-            )}
             <button
               onClick={handleSave}
               disabled={isSaving || !isSubscribed}
-              title={isSubscribed ? undefined : 'Abonnement requis pour créer un devis'}
+              title={isSubscribed ? undefined : `Abonnement requis pour ${editingDevis ? 'modifier' : 'créer'} un devis`}
               className="btn-primary flex-1 gap-1.5">
               {isSaving
                 ? <><Loader2 size={13} className="animate-spin" /> Enregistrement…</>
                 : editingDevis
                   ? 'Mettre à jour'
-                  : `Créer${totalAvecOptions > 0 ? ' — ' + formatEuros(totalAvecOptions) : ''}`
+                  : selectedClientEmail
+                    ? <><Mail size={14} /> Créer et envoyer{totalAvecOptions > 0 ? ' — ' + formatEuros(totalAvecOptions) : ''}</>
+                    : `Créer${totalAvecOptions > 0 ? ' — ' + formatEuros(totalAvecOptions) : ''}`
               }
             </button>
           </div>
