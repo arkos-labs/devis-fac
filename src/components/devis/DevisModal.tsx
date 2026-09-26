@@ -55,7 +55,7 @@ interface PrestationRow {
 interface Props {
   editingDevis?: Devis | null
   initialClientId?: string
-  onSave: (form: DevisFormData, lignes: LigneForm[]) => void
+  onSave: (form: DevisFormData, lignes: LigneForm[], sendByEmail?: boolean) => void
   onClose: () => void
   isSaving: boolean
 }
@@ -314,24 +314,12 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
 
   const selectedClientEmail = clients.find(c => c.id === form.client_id)?.email || ''
 
-  const sendEmail = () => {
-    const total = totalAvecOptions
-    const subject = encodeURIComponent(`Devis — ${form.titre || 'prestation'}`)
-    const valDate = form.date_validite ? new Date(form.date_validite).toLocaleDateString('fr-FR') : '—'
-    const signatureLine = form.signature_activee
-      ? `\n\nPour valider ce devis, signez-le en ligne ici :\n${window.location.origin}/devis/signature/${form.signature_token}\n`
-      : ''
-    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${form.titre || 'prestation'}.\n\nMontant total : ${formatEuros(total)}\nValidité : jusqu'au ${valDate}${signatureLine}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
-    window.open(`mailto:${selectedClientEmail}?subject=${subject}&body=${body}`)
-  }
-
   const handleSave = () => {
     if (!isSubscribed) return toast.error(`Abonnez-vous pour ${editingDevis ? 'modifier' : 'créer'} un devis`)
     if (!form.client_id) return toast.error('Sélectionnez un client')
     if (!form.titre.trim()) return toast.error('Ajoutez un titre au devis')
     if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
-    if (!editingDevis && selectedClientEmail) sendEmail()
-    onSave(form, toLignes())
+    onSave(form, toLignes(), !editingDevis && !!selectedClientEmail)
   }
 
   return (

@@ -40,7 +40,7 @@ export default function FacturesPage() {
   const { user } = useAuth()
   const { isActive: isSubscribed } = useSubscription()
   const qc = useQueryClient()
-  const { download, downloadingId } = useDocumentDownload()
+  const { download, downloadingId, sendByEmail } = useDocumentDownload()
   const { exportMonth, isExporting } = useMonthArchive()
   const [exportMonthValue, setExportMonthValue] = useState(() => new Date().toISOString().slice(0, 7))
   const [search, setSearch]           = useState('')
@@ -71,9 +71,10 @@ export default function FacturesPage() {
 
   // ── Mutation créer/modifier facture ───────────────────────────
   const saveFacture = useMutation({
-    mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: LigneForm[] }) => {
+    mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: LigneForm[]; send?: boolean }) => {
       if (!isSubscribed) throw new Error('Abonnez-vous pour créer une facture')
       let factureId: string
+      let newFactureFull: Facture | null = null
 
       if (editingFacture) {
         const { error } = await supabase.from('factures').update({
@@ -117,9 +118,10 @@ export default function FacturesPage() {
           montant_total: montantTotal,
           note_google_snapshot: params?.note_google ?? null,
           nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
-        }).select().single()
+        }).select('*, clients(email)').single()
         if (error) throw error
         factureId = newFacture.id
+        newFactureFull = newFacture as unknown as Facture
       }
 
       const { error: lignesError } = await supabase.from('lignes_prestation').insert(
@@ -136,12 +138,16 @@ export default function FacturesPage() {
         }))
       )
       if (lignesError) throw lignesError
+      return newFactureFull
     },
-    onSuccess: () => {
+    onSuccess: async (newFactureFull, variables) => {
       qc.invalidateQueries({ queryKey: ['factures', user?.id] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success(editingFacture ? 'Facture mise à jour !' : 'Facture créée !')
       closeModal()
+      if (variables.send && newFactureFull) {
+        await sendByEmail(newFactureFull, 'facture', (newFactureFull.clients as { email?: string } | null)?.email || '')
+      }
     },
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
@@ -498,7 +504,7 @@ export default function FacturesPage() {
       {showModal && (
         <FactureModal
           editingFacture={editingFacture}
-          onSave={(form, lignes) => saveFacture.mutate({ form, lignes })}
+          onSave={(form, lignes, send) => saveFacture.mutate({ form, lignes, send })}
           onClose={closeModal}
           isSaving={saveFacture.isPending}
         />

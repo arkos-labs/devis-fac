@@ -24,7 +24,7 @@ export default function DevisPage() {
   const { user } = useAuth()
   const { isActive: isSubscribed } = useSubscription()
   const qc = useQueryClient()
-  const { download, downloadingId } = useDocumentDownload()
+  const { download, downloadingId, sendByEmail } = useDocumentDownload()
   const { exportMonth, isExporting } = useMonthArchive()
   const [search, setSearch] = useState('')
   const [filterStatut, setFilterStatut] = useState<string>('tous')
@@ -58,9 +58,10 @@ export default function DevisPage() {
 
   // ── Mutation créer/modifier devis ────────────────────────────
   const saveDevis = useMutation({
-    mutationFn: async ({ form, lignes }: { form: DevisFormData; lignes: LigneForm[] }) => {
+    mutationFn: async ({ form, lignes }: { form: DevisFormData; lignes: LigneForm[]; send?: boolean }) => {
       if (!isSubscribed) throw new Error('Abonnez-vous pour créer un devis')
       let devisId: string
+      const isNew = !editingDevis
 
       if (editingDevis) {
         const { error } = await supabase.from('devis').update({
@@ -119,12 +120,22 @@ export default function DevisPage() {
         }))
       )
       if (lignesError) throw lignesError
+
+      if (isNew) {
+        const { data: fullDevis } = await supabase
+          .from('devis').select('*, clients(email)').eq('id', devisId).single()
+        return fullDevis as unknown as Devis
+      }
+      return null
     },
-    onSuccess: () => {
+    onSuccess: async (fullDevis, variables) => {
       qc.invalidateQueries({ queryKey: ['devis', user?.id] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success(editingDevis ? 'Devis mis à jour !' : 'Devis créé !')
       closeModal()
+      if (variables.send && fullDevis) {
+        await sendByEmail(fullDevis, 'devis', (fullDevis.clients as { email?: string } | null)?.email || '')
+      }
     },
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
@@ -454,7 +465,7 @@ export default function DevisPage() {
       {showModal && (
         <DevisModal
           editingDevis={editingDevis}
-          onSave={(form, lignes) => saveDevis.mutate({ form, lignes })}
+          onSave={(form, lignes, send) => saveDevis.mutate({ form, lignes, send })}
           onClose={closeModal}
           isSaving={saveDevis.isPending}
         />
