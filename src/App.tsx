@@ -9,6 +9,7 @@ import DevisPage from '@/pages/DevisPage'
 import FacturesPage from '@/pages/FacturesPage'
 import ParametresPage from '@/pages/ParametresPage'
 import ClientDetailPage from '@/pages/ClientDetailPage'
+import LandingPage from '@/pages/LandingPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -34,6 +35,10 @@ export default function App() {
   return (
     <Routes>
       <Route
+        path="/"
+        element={user ? <Navigate to="/dashboard" replace /> : <LandingPage />}
+      />
+      <Route
         path="/login"
         element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />}
       />
@@ -42,20 +47,18 @@ export default function App() {
         element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />}
       />
       <Route
-        path="/"
         element={
           <RequireAuth>
             <Layout />
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard"   element={<DashboardPage />} />
-        <Route path="clients"     element={<ClientsPage />} />
-        <Route path="devis"       element={<DevisPage />} />
-        <Route path="factures"    element={<FacturesPage />} />
-        <Route path="parametres"  element={<ParametresPage />} />
-        <Route path="clients/:id" element={<ClientDetailPage />} />
+        <Route path="/dashboard"   element={<DashboardPage />} />
+        <Route path="/clients"     element={<ClientsPage />} />
+        <Route path="/devis"       element={<DevisPage />} />
+        <Route path="/factures"    element={<FacturesPage />} />
+        <Route path="/parametres"  element={<ParametresPage />} />
+        <Route path="/clients/:id" element={<ClientDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

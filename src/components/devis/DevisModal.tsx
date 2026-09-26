@@ -610,35 +610,6 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
             </button>
           </div>
 
-          {/* ── Section options / upsells libres ──────────────── */}
-          <div className="rounded-2xl border border-violet-200 bg-violet-50/30 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Tag size={14} className="text-violet-600" />
-              <div>
-                <p className="text-sm font-bold text-violet-800">Options supplémentaires (upsells)</p>
-                <p className="text-[11px] text-violet-500">Augmentent le panier moyen : traitement anti-odeur, démoussage, protection hydrophobe, joints carrelage…</p>
-              </div>
-            </div>
-            {rows.flatMap(r =>
-              r.options.filter(o => !upsellsOf(r.catalogueId ?? '').some(u => u.nom === o.description)).map((o, _oi) => {
-                const realIdx = r.options.indexOf(o)
-                return (
-                  <div key={`${r.uid}-${realIdx}`} className="flex items-center gap-2">
-                    <Tag size={10} className="text-violet-400 flex-shrink-0" />
-                    <input value={o.description} onChange={e => updateOption(r.uid, realIdx, 'description', e.target.value)}
-                      placeholder="Nom de l'option (ex : Traitement anti-odeur)" className="input flex-1 text-xs py-1.5" />
-                    <input type="number" value={o.prix} onChange={e => updateOption(r.uid, realIdx, 'prix', +e.target.value)}
-                      placeholder="€" className="input w-20 text-xs py-1.5 text-right" />
-                    <button onClick={() => removeOption(r.uid, realIdx)} className="p-1 text-slate-300 hover:text-red-500 transition-colors"><X size={12} /></button>
-                  </div>
-                )
-              })
-            )}
-            <button onClick={() => setRows(rs => { const up = [...rs]; up[up.length-1].options = [...up[up.length-1].options, { description: '', prix: 0 }]; return [...up] })}
-              className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-600 hover:text-violet-800 transition-colors">
-              <Plus size={12} /> Ajouter une option libre
-            </button>
-          </div>
 
           {/* ── Double total ──────────────────────────────────── */}
           {totalSansOptions > 0 && (
