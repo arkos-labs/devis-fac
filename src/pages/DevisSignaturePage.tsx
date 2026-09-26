@@ -94,7 +94,7 @@ export default function DevisSignaturePage() {
           {lignes.length > 0 && (
             <div className="rounded-2xl border border-slate-200 divide-y divide-slate-100">
               {lignes.map((l, i) => (
-                <div key={i} className={`flex items-center justify-between px-4 py-3 ${l.is_upsell ? 'bg-violet-50/40' : ''}`}>
+                <div key={i} className="flex items-center justify-between px-4 py-3">
                   <div>
                     <p className="text-sm font-medium text-slate-700">{l.description}</p>
                     {l.detail && <p className="text-xs text-slate-400">{l.detail}</p>}

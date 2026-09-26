@@ -87,8 +87,7 @@ BEGIN
         'quantite', l.quantite,
         'unite', l.unite,
         'prix_unitaire', l.prix_unitaire,
-        'montant_ligne', l.montant_ligne,
-        'is_upsell', l.is_upsell
+        'montant_ligne', l.montant_ligne
       ) ORDER BY l.ordre), '[]'::json)
       FROM public.lignes_prestation l
       WHERE l.document_type = 'devis' AND l.document_id = v_devis.id

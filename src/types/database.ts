@@ -102,7 +102,7 @@ export interface DevisSignaturePublic {
   lignes?: Array<{
     description: string; detail: string | null
     quantite: number; unite: string
-    prix_unitaire: number; montant_ligne: number; is_upsell: boolean
+    prix_unitaire: number; montant_ligne: number
   }>
 }
 
