@@ -52,6 +52,7 @@ interface PrestationRow {
 
 interface Props {
   editingFacture?: Facture | null
+  initialClientId?: string
   onSave: (form: FactureFormData, lignes: LigneForm[]) => void
   onClose: () => void
   isSaving: boolean
@@ -70,12 +71,12 @@ const dateIn30Days = () => {
   return d.toISOString().slice(0, 10)
 }
 
-export default function FactureModal({ editingFacture, onSave, onClose, isSaving }: Props) {
+export default function FactureModal({ editingFacture, initialClientId, onSave, onClose, isSaving }: Props) {
   const { user } = useAuth()
   const { isActive: isSubscribed } = useSubscription()
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
   const [form, setForm] = useState<FactureFormData>({
-    client_id: '', date_echeance: dateIn30Days(), notes_client: '',
+    client_id: initialClientId ?? '', date_echeance: dateIn30Days(), notes_client: '',
     notes_internes: '', titre: ''
   })
 

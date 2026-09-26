@@ -78,21 +78,25 @@ export default function Select({ value, onChange, options, className, buttonClas
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 9999 }}
-          className="min-w-max max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg py-1.5 animate-slide-up"
+          className="min-w-max max-h-64 overflow-y-auto rounded-2xl border border-slate-100 bg-white shadow-xl ring-1 ring-black/5 py-2 animate-slide-up"
         >
-          {options.map(o => {
-            const isSelected = o.value === value
+          {options.map((o, i) => {
+            const isPlaceholder = o.value === ''
+            const isSelected = !isPlaceholder && o.value === value
             return (
               <button
-                key={o.value}
+                key={o.value || `placeholder-${i}`}
                 type="button"
                 onClick={() => { onChange(o.value); setOpen(false) }}
                 className={cn(
-                  'w-full flex items-center justify-between gap-2 px-3.5 py-2 text-sm text-left transition-colors',
-                  isSelected ? 'text-brand-700 font-semibold bg-brand-50' : 'text-slate-600 hover:bg-slate-50'
+                  'w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-sm text-left transition-colors mx-1 rounded-xl',
+                  isPlaceholder && 'text-slate-400',
+                  isSelected ? 'text-brand-700 font-semibold bg-brand-50' : !isPlaceholder && 'text-slate-600 hover:bg-slate-50',
+                  isPlaceholder && 'hover:bg-slate-50'
                 )}
+                style={{ width: 'calc(100% - 0.5rem)' }}
               >
-                {o.label}
+                <span className="truncate">{o.label}</span>
                 {isSelected && <Check size={13} className="text-brand-600 flex-shrink-0" />}
               </button>
             )
