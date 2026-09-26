@@ -7,7 +7,8 @@
 ALTER TABLE public.devis
   ADD COLUMN IF NOT EXISTS signature_activee BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS signature_token    UUID NOT NULL DEFAULT uuid_generate_v4(),
-  ADD COLUMN IF NOT EXISTS signature_date      TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS signature_date      TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS signature_nom_signataire TEXT;
 
 DO $$
 BEGIN
@@ -71,7 +72,8 @@ BEGIN
       'montant_ht', v_devis.montant_ht,
       'montant_total', v_devis.montant_total,
       'notes_client', v_devis.notes_client,
-      'signature_date', v_devis.signature_date
+      'signature_date', v_devis.signature_date,
+      'signature_nom_signataire', v_devis.signature_nom_signataire
     ),
     'client', (
       SELECT json_build_object(
@@ -115,7 +117,8 @@ COMMENT ON FUNCTION public.get_devis_signature IS
 -- ── 4. Fonction publique : le client signe ou refuse le devis ──
 CREATE OR REPLACE FUNCTION public.repondre_devis_signature(
   p_token    UUID,
-  p_reponse  TEXT  -- 'signe' ou 'refuse'
+  p_reponse  TEXT,  -- 'signe' ou 'refuse'
+  p_nom      TEXT DEFAULT NULL  -- nom complet saisi par le client, requis si p_reponse = 'signe'
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -127,6 +130,10 @@ DECLARE
 BEGIN
   IF p_reponse NOT IN ('signe', 'refuse') THEN
     RETURN json_build_object('success', false, 'error', 'reponse_invalide');
+  END IF;
+
+  IF p_reponse = 'signe' AND (p_nom IS NULL OR btrim(p_nom) = '') THEN
+    RETURN json_build_object('success', false, 'error', 'nom_requis');
   END IF;
 
   SELECT * INTO v_devis
@@ -142,7 +149,9 @@ BEGIN
   END IF;
 
   UPDATE public.devis
-  SET statut = p_reponse, signature_date = now()
+  SET statut = p_reponse,
+      signature_date = now(),
+      signature_nom_signataire = CASE WHEN p_reponse = 'signe' THEN btrim(p_nom) ELSE NULL END
   WHERE id = v_devis.id;
 
   RETURN json_build_object('success', true, 'statut', p_reponse);
@@ -150,11 +159,11 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.repondre_devis_signature IS
-'Permet à un client (accès anonyme via token) de signer ou refuser un devis. Met à jour le statut automatiquement.';
+'Permet à un client (accès anonyme via token) de signer (avec son nom complet en guise de signature) ou refuser un devis. Met à jour le statut automatiquement.';
 
 -- ── 5. Grants ─────────────────────────────────────────────────
 GRANT EXECUTE ON FUNCTION public.get_devis_signature(UUID)       TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.repondre_devis_signature(UUID, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.repondre_devis_signature(UUID, TEXT, TEXT) TO anon, authenticated;
 
 -- ============================================================
 -- FIN DE LA MIGRATION

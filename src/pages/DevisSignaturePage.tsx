@@ -10,6 +10,7 @@ import toast from 'react-hot-toast'
 export default function DevisSignaturePage() {
   const { token } = useParams<{ token: string }>()
   const [confirming, setConfirming] = useState<'signe' | 'refuse' | null>(null)
+  const [nomSignataire, setNomSignataire] = useState('')
 
   const { data, isLoading, refetch } = useQuery<DevisSignaturePublic>({
     queryKey: ['devis-signature', token],
@@ -24,18 +25,21 @@ export default function DevisSignaturePage() {
   const repondre = useMutation({
     mutationFn: async (reponse: 'signe' | 'refuse') => {
       const { data, error } = await supabase.rpc('repondre_devis_signature', {
-        p_token: token, p_reponse: reponse,
+        p_token: token, p_reponse: reponse, p_nom: reponse === 'signe' ? nomSignataire.trim() : undefined,
       })
       if (error) throw error
       return data as { success: boolean; error?: string }
     },
     onSuccess: (res) => {
-      setConfirming(null)
       if (!res.success) {
-        toast.error(res.error === 'deja_traite' ? 'Ce devis a déjà reçu une réponse.' : 'Une erreur est survenue.')
-      } else {
-        toast.success(reponseLabel(res.error ? '' : (confirming ?? '')))
+        setConfirming(null)
+        if (res.error === 'deja_traite') toast.error('Ce devis a déjà reçu une réponse.')
+        else if (res.error === 'nom_requis') toast.error('Merci de saisir votre nom complet pour signer.')
+        else toast.error('Une erreur est survenue.')
+        return
       }
+      toast.success(confirming === 'signe' ? 'Devis signé avec succès !' : 'Devis refusé.')
+      setConfirming(null)
       refetch()
     },
     onError: () => {
@@ -43,8 +47,6 @@ export default function DevisSignaturePage() {
       toast.error('Une erreur est survenue, veuillez réessayer.')
     },
   })
-
-  const reponseLabel = (_r: string) => confirming === 'signe' ? 'Devis signé avec succès !' : 'Devis refusé.'
 
   if (isLoading) {
     return (
@@ -165,6 +167,9 @@ export default function DevisSignaturePage() {
                 <>
                   <CheckCircle2 size={36} className="mx-auto text-emerald-500 mb-2" />
                   <p className="font-bold text-emerald-700">Vous avez signé ce devis</p>
+                  {devis.signature_nom_signataire && (
+                    <p className="text-sm text-slate-500 mt-1">Signé par <span className="font-semibold">{devis.signature_nom_signataire}</span></p>
+                  )}
                   {devis.signature_date && (
                     <p className="text-xs text-slate-400 mt-1">le {formatDate(devis.signature_date)}</p>
                   )}
@@ -179,12 +184,28 @@ export default function DevisSignaturePage() {
               )}
             </div>
           ) : confirming ? (
-            <div className="text-center py-2 space-y-4">
-              <p className="text-sm font-semibold text-slate-700">
+            <div className="py-2 space-y-4">
+              <p className="text-sm font-semibold text-slate-700 text-center">
                 {confirming === 'signe'
                   ? 'Confirmez-vous la signature de ce devis ?'
                   : 'Confirmez-vous le refus de ce devis ?'}
               </p>
+
+              {confirming === 'signe' && (
+                <div className="max-w-sm mx-auto">
+                  <label className="text-xs font-semibold text-slate-500 mb-1 block">
+                    Votre nom complet <span className="text-slate-400 font-normal">(fait office de signature)</span>
+                  </label>
+                  <input
+                    autoFocus
+                    value={nomSignataire}
+                    onChange={e => setNomSignataire(e.target.value)}
+                    placeholder="Prénom Nom"
+                    className="input text-lg italic"
+                  />
+                </div>
+              )}
+
               <div className="flex gap-3 justify-center">
                 <button className="btn-secondary" onClick={() => setConfirming(null)} disabled={repondre.isPending}>
                   Annuler
@@ -192,7 +213,7 @@ export default function DevisSignaturePage() {
                 <button
                   className={confirming === 'signe' ? 'btn-primary gap-1.5' : 'btn bg-red-600 text-white hover:bg-red-700 gap-1.5'}
                   onClick={() => repondre.mutate(confirming)}
-                  disabled={repondre.isPending}
+                  disabled={repondre.isPending || (confirming === 'signe' && !nomSignataire.trim())}
                 >
                   {repondre.isPending
                     ? <Loader2 size={14} className="animate-spin" />
