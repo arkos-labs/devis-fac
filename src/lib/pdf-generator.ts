@@ -63,6 +63,25 @@ export interface PdfGenInput {
   parametres: ParametresCompte
 }
 
+// Télécharge et embarque le logo (PNG ou JPEG) dans le PDF. Retourne null
+// si l'URL est absente ou le format non supporté, pour ne jamais bloquer
+// la génération du document.
+async function embedImage(doc: PDFDocument, url: string | null) {
+  if (!url) return null
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const bytes = new Uint8Array(await res.arrayBuffer())
+    const contentType = res.headers.get('content-type') ?? ''
+    if (contentType.includes('png') || url.toLowerCase().endsWith('.png')) {
+      return await doc.embedPng(bytes)
+    }
+    return await doc.embedJpg(bytes)
+  } catch {
+    return null
+  }
+}
+
 export async function generateDocumentPdf({ document, type, lignes, client, parametres }: PdfGenInput): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
   const font = await doc.embedFont(StandardFonts.Helvetica)
@@ -73,8 +92,18 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
   const titre = isDevis ? 'DEVIS' : 'FACTURE'
 
   // ── En-tête ──────────────────────────────────────────────
-  text(ctx, parametres.nom_entreprise, MARGIN, 16, true)
-  ctx.y -= 22
+  const logo = await embedImage(doc, parametres.logo_url)
+  if (logo) {
+    const maxH = 45
+    const scale = Math.min(maxH / logo.height, 130 / logo.width)
+    const w = logo.width * scale
+    const h = logo.height * scale
+    ctx.page.drawImage(logo, { x: MARGIN, y: ctx.y - h, width: w, height: h })
+    ctx.y -= h + 8
+  } else {
+    text(ctx, parametres.nom_entreprise, MARGIN, 16, true)
+    ctx.y -= 22
+  }
   text(ctx, titre, MARGIN, 22, true, rgb(0.09, 0.25, 0.55))
   text(ctx, `N° ${document.numero}`, PAGE_W - MARGIN - 150, 11, true)
   ctx.y -= 16
@@ -206,6 +235,25 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
     text(ctx, "Bon pour accord, précédé de la mention manuscrite, daté et signé :", MARGIN, 9, false, rgb(0.5, 0.5, 0.55))
     ctx.y -= 40
   }
+
+  // ── Signature du prestataire ──────────────────────────────
+  ensureSpace(ctx, 70)
+  const signature = await embedImage(doc, parametres.signature_url)
+  const sigX = PAGE_W - MARGIN - 120
+  text(ctx, 'Le Prestataire', sigX, 8, true, rgb(0.6, 0.6, 0.65))
+  ctx.y -= 10
+  if (signature) {
+    const maxH = 40
+    const scale = Math.min(maxH / signature.height, 120 / signature.width)
+    const w = signature.width * scale
+    const h = signature.height * scale
+    ctx.page.drawImage(signature, { x: PAGE_W - MARGIN - w, y: ctx.y - h, width: w, height: h })
+    ctx.y -= h + 4
+  } else {
+    ctx.y -= 40
+  }
+  text(ctx, parametres.nom_entreprise, sigX, 9, true)
+  ctx.y -= 20
 
   if (parametres.mentions_legales) {
     for (const l of parametres.mentions_legales.split('\n').filter(Boolean)) {

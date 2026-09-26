@@ -537,36 +537,54 @@ export default function ParametresPage() {
       {/* ── Documents PDF ────────────────────────────────── */}
       <Section icon={FileText} title="Documents (Devis & Factures PDF)">
         <div className="space-y-4">
-          <div className="form-group">
-            <label className="label">Logo de l'entreprise</label>
-            <div className="flex gap-2 items-center">
-              <input className="input flex-1" placeholder="https://…/logo.png" {...f('logo_url')} />
-              <label className={`btn-secondary btn-sm whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${uploadingLogo ? 'opacity-60' : ''}`}>
-                {uploadingLogo ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                Upload
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="form-group">
+              <label className="label">Logo de l'entreprise</label>
+              <label className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed cursor-pointer transition-colors
+                ${form.logo_url ? 'border-slate-200 bg-slate-50/50' : 'border-slate-300 hover:border-brand-400 hover:bg-brand-50/30'}
+                ${uploadingLogo ? 'opacity-60 pointer-events-none' : ''}`}>
+                {uploadingLogo ? (
+                  <Loader2 size={20} className="animate-spin text-brand-600" />
+                ) : form.logo_url ? (
+                  <img src={form.logo_url} alt="Logo" className="h-16 object-contain" />
+                ) : (
+                  <>
+                    <Upload size={20} className="text-slate-400" />
+                    <span className="text-xs text-slate-500 font-medium">Choisir un fichier image</span>
+                  </>
+                )}
                 <input type="file" accept="image/*" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f, 'logos', 'logo_url', setUploadingLogo) }} />
               </label>
+              {form.logo_url && (
+                <button type="button" onClick={() => setForm(p => ({ ...p, logo_url: '' }))}
+                  className="text-xs text-red-500 hover:underline mt-1">Retirer le logo</button>
+              )}
             </div>
-            {form.logo_url && (
-              <img src={form.logo_url} alt="Logo" className="mt-2 h-12 object-contain rounded-lg border border-slate-100" />
-            )}
-          </div>
 
-          <div className="form-group">
-            <label className="label">Signature du prestataire</label>
-            <div className="flex gap-2 items-center">
-              <input className="input flex-1" placeholder="https://…/signature.png" {...f('signature_url')} />
-              <label className={`btn-secondary btn-sm whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${uploadingSig ? 'opacity-60' : ''}`}>
-                {uploadingSig ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-                Upload
+            <div className="form-group">
+              <label className="label">Signature du prestataire</label>
+              <label className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed cursor-pointer transition-colors
+                ${form.signature_url ? 'border-slate-200 bg-slate-50/50' : 'border-slate-300 hover:border-brand-400 hover:bg-brand-50/30'}
+                ${uploadingSig ? 'opacity-60 pointer-events-none' : ''}`}>
+                {uploadingSig ? (
+                  <Loader2 size={20} className="animate-spin text-brand-600" />
+                ) : form.signature_url ? (
+                  <img src={form.signature_url} alt="Signature" className="h-16 object-contain" />
+                ) : (
+                  <>
+                    <Upload size={20} className="text-slate-400" />
+                    <span className="text-xs text-slate-500 font-medium">Choisir un fichier image</span>
+                  </>
+                )}
                 <input type="file" accept="image/*" className="hidden"
                   onChange={e => { const fi = e.target.files?.[0]; if (fi) uploadFile(fi, 'signatures', 'signature_url', setUploadingSig) }} />
               </label>
+              {form.signature_url && (
+                <button type="button" onClick={() => setForm(p => ({ ...p, signature_url: '' }))}
+                  className="text-xs text-red-500 hover:underline mt-1">Retirer la signature</button>
+              )}
             </div>
-            {form.signature_url && (
-              <img src={form.signature_url} alt="Signature" className="mt-2 h-12 object-contain rounded-lg border border-slate-100" />
-            )}
           </div>
 
           <div className="form-group">
