@@ -94,12 +94,13 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
   // ── En-tête ──────────────────────────────────────────────
   const logo = await embedImage(doc, parametres.logo_url)
   if (logo) {
-    const maxH = 45
-    const scale = Math.min(maxH / logo.height, 130 / logo.width)
+    const maxH = 90
+    const maxW = 220
+    const scale = Math.min(maxH / logo.height, maxW / logo.width)
     const w = logo.width * scale
     const h = logo.height * scale
     ctx.page.drawImage(logo, { x: MARGIN, y: ctx.y - h, width: w, height: h })
-    ctx.y -= h + 8
+    ctx.y -= h + 12
   } else {
     text(ctx, parametres.nom_entreprise, MARGIN, 16, true)
     ctx.y -= 22
