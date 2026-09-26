@@ -91,6 +91,12 @@ export default function FacturesPage() {
         const { data: params } = await supabase
           .from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', user!.id).single()
 
+        // Le montant est calculé ici et injecté dès la création : la facture
+        // étant inaltérable côté DB (trigger trg_facture_inalterable), la mise
+        // à jour ultérieure du total par le trigger de synchro des lignes doit
+        // être un no-op (montant déjà correct), sinon l'UPDATE est rejeté.
+        const montantTotal = lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0)
+
         const { data: newFacture, error } = await supabase.from('factures').insert({
           user_id: user!.id,
           client_id: form.client_id,
@@ -102,6 +108,8 @@ export default function FacturesPage() {
           notes_internes: form.notes_internes || null,
           titre: form.titre || null,
           statut: 'en_attente',
+          montant_ht: montantTotal,
+          montant_total: montantTotal,
           note_google_snapshot: params?.note_google ?? null,
           nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
         }).select().single()
