@@ -151,6 +151,11 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
   line(ctx, MARGIN, PAGE_W - MARGIN)
   ctx.y -= 20
 
+  if (document.titre) {
+    text(ctx, document.titre, MARGIN, 13, true, rgb(0.09, 0.25, 0.55))
+    ctx.y -= 22
+  }
+
   // ── Tableau des prestations ──────────────────────────────
   const colDesc = MARGIN
   const colQte = PAGE_W - MARGIN - 220
