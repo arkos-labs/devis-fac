@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Sparkles, CheckCircle2, ArrowRight, Zap, Shield, FileText } from 'lucide-react'
+import ProductShowcase from '@/components/landing/ProductShowcase'
 
 export default function LandingPage() {
   return (
@@ -67,6 +68,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Aperçu produit ── */}
+      <ProductShowcase />
 
       {/* ── Features ── */}
       <section className="py-24 bg-slate-50 border-y border-slate-100 relative overflow-hidden">
