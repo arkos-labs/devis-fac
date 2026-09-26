@@ -51,7 +51,7 @@ export default function Select({ value, onChange, options, className, buttonClas
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1.5 w-full min-w-max rounded-xl border border-slate-200 bg-white shadow-lg py-1.5 animate-slide-up">
+        <div className="absolute z-20 mt-1.5 w-full min-w-max max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg py-1.5 animate-slide-up">
           {options.map(o => {
             const isSelected = o.value === value
             return (

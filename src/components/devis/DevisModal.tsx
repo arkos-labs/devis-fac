@@ -490,9 +490,9 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
             {rows.map((row, rowIndex) => {
               const upsells = row.catalogueId ? upsellsOf(row.catalogueId) : []
               return (
-                <div key={row.uid} className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-brand-200 transition-all duration-150">
+                <div key={row.uid} className="rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-brand-200 transition-all duration-150">
                   {/* ─ Ligne principale avec numéro ─ */}
-                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-slate-50 to-white">
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-slate-50 to-white rounded-2xl">
                     <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {rowIndex + 1}
                     </span>
@@ -543,7 +543,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
 
                   {/* ─ Upsells de cette prestation ─ */}
                   {(upsells.length > 0 || row.options.length > 0) && (
-                    <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 space-y-2">
+                    <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 space-y-2 rounded-b-2xl">
 
                       {/* Upsells catalogue à cocher */}
                       {upsells.length > 0 && (
