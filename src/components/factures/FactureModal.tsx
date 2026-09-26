@@ -52,6 +52,7 @@ interface PrestationRow {
 
 interface Props {
   editingFacture?: Facture | null
+  initialClientId?: string
   onSave: (form: FactureFormData, lignes: LigneForm[]) => void
   onClose: () => void
   isSaving: boolean
@@ -70,12 +71,12 @@ const dateIn30Days = () => {
   return d.toISOString().slice(0, 10)
 }
 
-export default function FactureModal({ editingFacture, onSave, onClose, isSaving }: Props) {
+export default function FactureModal({ editingFacture, initialClientId, onSave, onClose, isSaving }: Props) {
   const { user } = useAuth()
   const { isActive: isSubscribed } = useSubscription()
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
   const [form, setForm] = useState<FactureFormData>({
-    client_id: '', date_echeance: dateIn30Days(), notes_client: '',
+    client_id: initialClientId ?? '', date_echeance: dateIn30Days(), notes_client: '',
     notes_internes: '', titre: ''
   })
 
@@ -273,9 +274,9 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
     const email = selectedClient?.email || ''
     if (!email) return toast.error("Ce client n'a pas d'email renseigné")
     const total = totalAvecOptions
-    const subject = encodeURIComponent(`Facture — ${form.titre || 'Prestation nettoyage'}`)
+    const subject = encodeURIComponent(`Facture — ${form.titre || 'Prestation'}`)
     const echDate = form.date_echeance ? new Date(form.date_echeance).toLocaleDateString('fr-FR') : '—'
-    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre facture pour : ${form.titre || 'prestation nettoyage'}.\n\nMontant total : ${formatEuros(total)}\nÉchéance : ${echDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
+    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre facture pour : ${form.titre || 'prestation'}.\n\nMontant total : ${formatEuros(total)}\nÉchéance : ${echDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
     window.open(`mailto:${email}?subject=${subject}&body=${body}`)
   }
 
@@ -398,7 +399,7 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
             <label className="label">Titre de la facture *</label>
             <input
               className="input font-semibold text-base"
-              placeholder="Ex : Nettoyage de Diogène 45m² — Appartement Toulouse"
+              placeholder="Ex : Refonte du site vitrine — Dupont SARL"
               value={form.titre}
               onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
             />
@@ -442,7 +443,7 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
                       />
                     ) : (
                       <input
-                        placeholder="Prestation (ex : Canapé 3 places)"
+                        placeholder="Prestation (ex : Consultation initiale)"
                         value={row.description}
                         onChange={e => updateRow(row.uid, { description: e.target.value })}
                         className="input flex-1 text-sm font-medium"

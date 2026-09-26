@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSubscription } from '@/lib/useSubscription'
 import { formatDate, formatEuros, getInitiales } from '@/lib/utils'
 import type { Client, Devis, Facture } from '@/types/database'
 import {
@@ -11,6 +12,9 @@ import {
   AlertCircle, XCircle, ExternalLink, Calendar, User,
   ChevronRight
 } from 'lucide-react'
+import toast from 'react-hot-toast'
+import DevisModal, { type LigneForm as DevisLigneForm, type DevisFormData } from '@/components/devis/DevisModal'
+import FactureModal, { type LigneForm as FactureLigneForm, type FactureFormData } from '@/components/factures/FactureModal'
 
 // ── Helpers ───────────────────────────────────────────────────
 function badgeDevis(statut: string) {
@@ -68,7 +72,7 @@ function PlanModal({ client, onClose }: PlanModalProps) {
   const [date, setDate]       = useState(today)
   const [heure, setHeure]     = useState('09:00')
   const [duree, setDuree]     = useState('2')
-  const [desc, setDesc]       = useState('Nettoyage')
+  const [desc, setDesc]       = useState('Rendez-vous')
   const [tarif, setTarif]     = useState('')
   const [adresse, setAdresse] = useState(
     [client.adresse, client.ville, client.code_postal].filter(Boolean).join(', ')
@@ -125,7 +129,7 @@ function PlanModal({ client, onClose }: PlanModalProps) {
           <div className="form-group">
             <label className="label">Description de la prestation</label>
             <input className="input" value={desc} onChange={e => setDesc(e.target.value)}
-              placeholder="Nettoyage canapé, voiture…" />
+              placeholder="Consultation, livraison…" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -183,7 +187,11 @@ export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { isActive: isSubscribed } = useSubscription()
+  const qc = useQueryClient()
   const [showPlan, setShowPlan] = useState(false)
+  const [showDevisModal, setShowDevisModal] = useState(false)
+  const [showFactureModal, setShowFactureModal] = useState(false)
 
   const { data: client, isLoading: loadingClient } = useQuery<Client>({
     queryKey: ['client', id],
@@ -218,6 +226,114 @@ export default function ClientDetailPage() {
       return (data ?? []) as Facture[]
     },
     enabled: !!user && !!id,
+  })
+
+  const saveDevis = useMutation({
+    mutationFn: async ({ form, lignes }: { form: DevisFormData; lignes: DevisLigneForm[] }) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour créer un devis')
+      const { data: numero, error: numError } = await supabase.rpc('get_next_numero', {
+        p_user_id: user!.id, p_type: 'devis'
+      })
+      if (numError) throw numError
+
+      const { data: params } = await supabase
+        .from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', user!.id).single()
+
+      const { data: newDevis, error } = await supabase.from('devis').insert({
+        user_id: user!.id,
+        client_id: form.client_id,
+        numero: numero as string,
+        date_validite: form.date_validite || null,
+        notes_client: form.notes_client || null,
+        notes_internes: form.notes_internes || null,
+        titre: form.titre || null,
+        genere_par_ia: form.genere_par_ia,
+        prompt_ia: form.prompt_ia || null,
+        statut: 'en_attente',
+        note_google_snapshot: params?.note_google ?? null,
+        nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
+      }).select().single()
+      if (error) throw error
+
+      const { error: lignesError } = await supabase.from('lignes_prestation').insert(
+        lignes.map((l, i) => ({
+          user_id: user!.id,
+          document_type: 'devis' as const,
+          document_id: newDevis.id,
+          ordre: i,
+          description: l.description,
+          detail: l.detail || null,
+          quantite: l.quantite,
+          unite: l.unite,
+          prix_unitaire: l.prix_unitaire,
+        }))
+      )
+      if (lignesError) throw lignesError
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['client-devis', id] })
+      qc.invalidateQueries({ queryKey: ['devis'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast.success('Devis créé !')
+      setShowDevisModal(false)
+    },
+    onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
+  })
+
+  const saveFacture = useMutation({
+    mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: FactureLigneForm[] }) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour créer une facture')
+      const { data: numero, error: numError } = await supabase.rpc('get_next_numero', {
+        p_user_id: user!.id, p_type: 'facture'
+      })
+      if (numError) throw numError
+
+      const { data: params } = await supabase
+        .from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', user!.id).single()
+
+      const montantTotal = lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0)
+
+      const { data: newFacture, error } = await supabase.from('factures').insert({
+        user_id: user!.id,
+        client_id: form.client_id,
+        devis_id: null,
+        numero: numero as string,
+        date_creation: new Date().toISOString(),
+        date_echeance: form.date_echeance || null,
+        notes_client: form.notes_client || null,
+        notes_internes: form.notes_internes || null,
+        titre: form.titre || null,
+        statut: 'en_attente',
+        montant_ht: montantTotal,
+        montant_total: montantTotal,
+        note_google_snapshot: params?.note_google ?? null,
+        nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
+      }).select().single()
+      if (error) throw error
+
+      const { error: lignesError } = await supabase.from('lignes_prestation').insert(
+        lignes.map((l, i) => ({
+          user_id: user!.id,
+          document_type: 'facture' as const,
+          document_id: newFacture.id,
+          ordre: i,
+          description: l.description,
+          detail: l.detail || null,
+          quantite: l.quantite,
+          unite: l.unite,
+          prix_unitaire: l.prix_unitaire,
+        }))
+      )
+      if (lignesError) throw lignesError
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['client-factures', id] })
+      qc.invalidateQueries({ queryKey: ['factures'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast.success('Facture créée !')
+      setShowFactureModal(false)
+    },
+    onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
 
   // Stats calculées côté client pour éviter une 3e requête
@@ -321,10 +437,24 @@ export default function ClientDetailPage() {
               <CalendarPlus size={15} />
               <span className="hidden sm:inline">Planifier</span>
             </button>
-            <Link to={`/devis?client=${id}`} className="btn-secondary gap-2 hidden sm:flex">
+            <button
+              onClick={() => setShowFactureModal(true)}
+              disabled={!isSubscribed}
+              title={isSubscribed ? undefined : 'Abonnement requis'}
+              className="btn-secondary gap-2 hidden sm:flex disabled:opacity-40"
+            >
+              <Receipt size={15} />
+              Nouvelle facture
+            </button>
+            <button
+              onClick={() => setShowDevisModal(true)}
+              disabled={!isSubscribed}
+              title={isSubscribed ? undefined : 'Abonnement requis'}
+              className="btn-secondary gap-2 hidden sm:flex disabled:opacity-40"
+            >
               <FileText size={15} />
               Nouveau devis
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -445,7 +575,7 @@ export default function ClientDetailPage() {
               <span className="badge badge-slate">{devisList.length}</span>
             )}
           </h2>
-          <Link to="/devis" className="text-xs text-brand-600 hover:underline font-semibold">
+          <Link to={`/devis?client=${id}`} className="text-xs text-brand-600 hover:underline font-semibold">
             Voir tout →
           </Link>
         </div>
@@ -510,6 +640,26 @@ export default function ClientDetailPage() {
 
       {/* ── Modal planification ────────────────────────────── */}
       {showPlan && <PlanModal client={client} onClose={() => setShowPlan(false)} />}
+
+      {/* ── Modal nouveau devis (pré-rempli pour ce client) ──── */}
+      {showDevisModal && (
+        <DevisModal
+          initialClientId={client.id}
+          onSave={(form, lignes) => saveDevis.mutate({ form, lignes })}
+          onClose={() => setShowDevisModal(false)}
+          isSaving={saveDevis.isPending}
+        />
+      )}
+
+      {/* ── Modal nouvelle facture (pré-remplie pour ce client) ── */}
+      {showFactureModal && (
+        <FactureModal
+          initialClientId={client.id}
+          onSave={(form, lignes) => saveFacture.mutate({ form, lignes })}
+          onClose={() => setShowFactureModal(false)}
+          isSaving={saveFacture.isPending}
+        />
+      )}
     </div>
   )
 }
