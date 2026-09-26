@@ -44,6 +44,13 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
   const sousTotal = lignes.reduce((s, l) => s + l.montant_ligne, 0)
   const totalTTC = sousTotal // TVA non applicable actuellement
 
+  const signatureClient = isDevis
+    ? (() => {
+        const d = document as Devis
+        return d.statut === 'signe' && d.signature_nom_signataire ? d : null
+      })()
+    : null
+
   // Récupérer les données de snapshot s'il y en a (pour figer l'historique), sinon celles en temps réel
   const docAvisNote = (document as any).note_google_snapshot ?? parametres.note_google ?? 5
   const docAvisCount = (document as any).nombre_avis_google_snapshot ?? parametres.nombre_avis_google ?? 0
@@ -272,11 +279,22 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
                 <p>RIB/IBAN disponible sur demande</p>
               </div>
             </>
+          ) : signatureClient ? (
+            <div className="bg-emerald-50 border border-emerald-200 p-5 h-40 flex flex-col">
+              <p className="font-medium text-emerald-800 mb-2">Devis accepté — signature électronique</p>
+              <p className="text-[10px] text-emerald-600 mb-4">Le client a signé ce devis en ligne, faisant office de signature.</p>
+              <div className="mt-auto">
+                <p className="italic text-lg text-neutral-800">{signatureClient.signature_nom_signataire}</p>
+                {signatureClient.signature_date && (
+                  <p className="text-[10px] text-neutral-500 mt-1">Signé le {formatDateLong(signatureClient.signature_date)}</p>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="bg-neutral-50 border border-neutral-200 p-5 h-40 flex flex-col">
               <p className="font-medium text-neutral-800 mb-2">Signature du client</p>
               <p className="text-[10px] text-neutral-500 mb-4">Précédée de la mention manuscrite "Bon pour accord", date et cachet de l'entreprise.</p>
-              
+
               <div className="mt-auto flex justify-between items-end text-neutral-400">
                   <span>Date : ___ / ___ / ______</span>
                   <span>Signature</span>
