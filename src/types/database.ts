@@ -245,6 +245,7 @@ export type Database = {
     Functions: {
       get_next_numero:              { Args: { p_user_id: string; p_type: string }; Returns: string }
       convertir_devis_en_facture:   { Args: { p_devis_id: string; p_user_id: string }; Returns: string }
+      creer_facture:                { Args: { p_user_id: string; p_client_id: string; p_titre: string | null; p_date_echeance: string | null; p_notes_client: string | null; p_notes_internes: string | null; p_lignes: Array<{ description: string; detail: string | null; quantite: number; unite: string; prix_unitaire: number }> }; Returns: Facture }
       get_dashboard_stats:          { Args: { p_user_id: string }; Returns: DashboardStats }
       get_clients_a_relancer:       { Args: { p_user_id: string }; Returns: ClientARelancer[] }
       envoyer_relance:              { Args: { p_user_id: string; p_client_id: string }; Returns: Record<string, any> }

@@ -293,48 +293,23 @@ export default function ClientDetailPage() {
   const saveFacture = useMutation({
     mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: FactureLigneForm[]; send?: boolean }) => {
       if (!isSubscribed) throw new Error('Abonnez-vous pour créer une facture')
-      const { data: numero, error: numError } = await supabase.rpc('get_next_numero', {
-        p_user_id: user!.id, p_type: 'facture'
+
+      // Numérotation + insertion facture + lignes en une seule transaction
+      // côté serveur (RPC creer_facture) : évite tout trou dans la
+      // numérotation légale en cas d'échec partiel (ex: coupure réseau).
+      const { data: newFacture, error } = await supabase.rpc('creer_facture', {
+        p_user_id: user!.id,
+        p_client_id: form.client_id,
+        p_titre: form.titre || null,
+        p_date_echeance: form.date_echeance || null,
+        p_notes_client: form.notes_client || null,
+        p_notes_internes: form.notes_internes || null,
+        p_lignes: lignes.map(l => ({
+          description: l.description, detail: l.detail || null,
+          quantite: l.quantite, unite: l.unite, prix_unitaire: l.prix_unitaire,
+        })),
       })
-      if (numError) throw numError
-
-      const { data: params } = await supabase
-        .from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', user!.id).single()
-
-      const montantTotal = lignes.reduce((s, l) => s + l.quantite * l.prix_unitaire, 0)
-
-      const { data: newFacture, error } = await supabase.from('factures').insert({
-        user_id: user!.id,
-        client_id: form.client_id,
-        devis_id: null,
-        numero: numero as string,
-        date_creation: new Date().toISOString(),
-        date_echeance: form.date_echeance || null,
-        notes_client: form.notes_client || null,
-        notes_internes: form.notes_internes || null,
-        titre: form.titre || null,
-        statut: 'en_attente',
-        montant_ht: montantTotal,
-        montant_total: montantTotal,
-        note_google_snapshot: params?.note_google ?? null,
-        nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
-      }).select().single()
       if (error) throw error
-
-      const { error: lignesError } = await supabase.from('lignes_prestation').insert(
-        lignes.map((l, i) => ({
-          user_id: user!.id,
-          document_type: 'facture' as const,
-          document_id: newFacture.id,
-          ordre: i,
-          description: l.description,
-          detail: l.detail || null,
-          quantite: l.quantite,
-          unite: l.unite,
-          prix_unitaire: l.prix_unitaire,
-        }))
-      )
-      if (lignesError) throw lignesError
       return newFacture as unknown as Facture
     },
     onSuccess: async (newFacture, variables) => {
