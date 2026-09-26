@@ -775,17 +775,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto animate-fade-in">
 
-      {IS_DEMO && (
-        <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-violet-50 border border-violet-200">
-          <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-base">🎭</span>
-          </div>
-          <div>
-            <p className="text-sm font-bold text-violet-800">Mode démo actif</p>
-            <p className="text-xs text-violet-600">Données fictives — Configurez votre <code className="bg-violet-100 px-1 rounded text-violet-700">.env</code> Supabase pour passer en production.</p>
-          </div>
-        </div>
-      )}
+
 
       {(stats?.factures_en_retard ?? 0) > 0 && (
         <button
