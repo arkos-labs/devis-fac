@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSubscription } from '@/lib/useSubscription'
 import { formatEuros, formatDate } from '@/lib/utils'
+import { Link } from 'react-router-dom'
 import type { Devis, Client } from '@/types/database'
 import {
   Plus, Search, Zap, FileText,
@@ -20,6 +22,7 @@ const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export default function DevisPage() {
   const { user } = useAuth()
+  const { isActive: isSubscribed } = useSubscription()
   const qc = useQueryClient()
   const { download, downloadingId } = useDocumentDownload()
   const { exportMonth, isExporting } = useMonthArchive()
@@ -56,6 +59,7 @@ export default function DevisPage() {
   // ── Mutation créer/modifier devis ────────────────────────────
   const saveDevis = useMutation({
     mutationFn: async ({ form, lignes }: { form: DevisFormData; lignes: LigneForm[] }) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour créer un devis')
       let devisId: string
 
       if (editingDevis) {
@@ -124,6 +128,7 @@ export default function DevisPage() {
   // ── Mutation convertir en facture ────────────────────────────
   const convertirEnFacture = useMutation({
     mutationFn: async (devisId: string) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour convertir un devis en facture')
       const { data, error } = await supabase.rpc('convertir_devis_en_facture', {
         p_devis_id: devisId, p_user_id: user!.id
       })
@@ -253,10 +258,23 @@ export default function DevisPage() {
             Exporter le mois
           </button>
         </div>
-        <button id="add-devis-btn" onClick={openNew} className="btn-primary">
+        <button
+          id="add-devis-btn"
+          onClick={openNew}
+          disabled={!isSubscribed}
+          title={isSubscribed ? undefined : 'Abonnement requis pour créer un devis'}
+          className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <Plus size={16} /> Nouveau devis
         </button>
       </div>
+
+      {!isSubscribed && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Abonnement inactif — la création et l'envoi de devis sont désactivés.{' '}
+          <Link to="/abonnement" className="font-semibold underline">S'abonner</Link>
+        </div>
+      )}
 
       {/* ── Filtres ────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -354,8 +372,8 @@ export default function DevisPage() {
                           {downloadingId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                         </button>
                         <button
-                          title="Convertir en facture"
-                          disabled={d.statut === 'refuse' || d.statut === 'expire' || convertirEnFacture.isPending}
+                          title={isSubscribed ? 'Convertir en facture' : 'Abonnement requis'}
+                          disabled={d.statut === 'refuse' || d.statut === 'expire' || convertirEnFacture.isPending || !isSubscribed}
                           onClick={() => {
                             if (confirm(`Convertir ${d.numero} en facture ?`)) {
                               convertirEnFacture.mutate(d.id)
