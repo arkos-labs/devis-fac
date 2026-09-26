@@ -277,7 +277,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
           messages: [
             {
               role: 'system',
-              content: `Expert nettoyage France. JSON: {"prestations":[{"description":"...","quantite":1,"unite":"forfait","prix_unitaire":0,"options":[{"description":"...","prix":0}]}],"notes_client":"..."}`
+              content: `Expert en prestations. JSON: {"prestations":[{"description":"...","quantite":1,"unite":"forfait","prix_unitaire":0,"options":[{"description":"...","prix":0}]}],"notes_client":"..."}`
             },
             { role: 'user', content: `Génère un devis pour : "${promptIA}"` }
           ],
@@ -316,9 +316,9 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
     const email = selectedClient?.email || ''
     if (!email) return toast.error("Ce client n'a pas d'email renseigné")
     const total = totalAvecOptions
-    const subject = encodeURIComponent(`Devis — ${form.titre || 'Prestation nettoyage'}`)
+    const subject = encodeURIComponent(`Devis — ${form.titre || 'prestation'}`)
     const valDate = form.date_validite ? new Date(form.date_validite).toLocaleDateString('fr-FR') : '—'
-    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${form.titre || 'prestation nettoyage'}.\n\nMontant total : ${formatEuros(total)}\nValidité : jusqu'au ${valDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
+    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${form.titre || 'prestation'}.\n\nMontant total : ${formatEuros(total)}\nValidité : jusqu'au ${valDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
     window.open(`mailto:${email}?subject=${subject}&body=${body}`)
   }
 

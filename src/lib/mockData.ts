@@ -1,5 +1,5 @@
 // ============================================================
-// DONNÉES DE DÉMONSTRATION — CRM Nettoyage Spécialisé
+// DONNÉES DE DÉMONSTRATION — CRM Prestation Spécialisé
 // Utilisées quand VITE_DEMO_MODE=true
 // ============================================================
 import type {
@@ -13,7 +13,7 @@ export const DEMO_USER_ID = 'demo-user-00000000-0000-0000-0000-000000000001'
 export const DEMO_PARAMETRES: ParametresCompte = {
   id: 'param-001',
   user_id: DEMO_USER_ID,
-  nom_entreprise: 'CleanPro Nettoyage',
+  nom_entreprise: 'Mon Entreprise',
   siret: '99039012200028',
   adresse_entreprise: '15 avenue de la Propreté, 75015 Paris',
   telephone_entreprise: '06 12 34 56 78',
@@ -56,7 +56,7 @@ export const DEMO_CLIENTS: Client[] = [
     nom: 'Jean-Pierre Martin', email: 'contact@martin-avocats.fr',
     telephone: '01 42 33 44 55',
     adresse: '45 boulevard Haussmann', ville: 'Paris', code_postal: '75008',
-    notes: 'Bureau 3 étages. Nettoyage mensuel.',
+    notes: 'Bureau 3 étages. Prestation mensuel.',
     date_creation: '2024-05-02T14:00:00Z', dernier_contact: '2026-09-01T08:30:00Z',
   },
   {
@@ -74,7 +74,7 @@ export const DEMO_CLIENTS: Client[] = [
     nom: 'Direction', email: 'direction@legourmet.fr',
     telephone: '01 48 12 34 56',
     adresse: '22 rue du Faubourg', ville: 'Neuilly-sur-Seine', code_postal: '92200',
-    notes: 'Nettoyage cuisine professionnelle hebdomadaire.',
+    notes: 'Prestation cuisine professionnelle hebdomadaire.',
     date_creation: '2025-01-10T09:00:00Z', dernier_contact: '2026-09-20T07:00:00Z',
   },
   {
@@ -101,30 +101,30 @@ export const DEMO_CLIENTS: Client[] = [
 export const DEMO_LIGNES: LignePrestation[] = [
   // Devis D-0005 (Maison 75m²)
   { id: 'l-001', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
-    ordre: 0, description: 'Nettoyage des sols', detail: 'Aspiration, lavage et lustrage de tous les revêtements',
+    ordre: 0, description: 'Prestation des sols', detail: 'Aspiration, lavage et lustrage de tous les revêtements',
     quantite: 75, unite: 'm²', prix_unitaire: 2.5, montant_ligne: 187.5, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-002', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
     ordre: 1, description: 'Dépoussiérage général', detail: 'Meubles, plinthes, prises, interrupteurs',
     quantite: 1, unite: 'forfait', prix_unitaire: 95, montant_ligne: 95, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-003', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
-    ordre: 2, description: 'Nettoyage cuisine', detail: 'Dégraissage four, hotte, plan de travail, évier',
+    ordre: 2, description: 'Prestation cuisine', detail: 'Dégraissage four, hotte, plan de travail, évier',
     quantite: 1, unite: 'forfait', prix_unitaire: 120, montant_ligne: 120, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-004', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
-    ordre: 3, description: 'Nettoyage salle de bain', detail: 'Détartrage, joints, miroirs, sanitaires',
+    ordre: 3, description: 'Prestation salle de bain', detail: 'Détartrage, joints, miroirs, sanitaires',
     quantite: 2, unite: 'pièce', prix_unitaire: 65, montant_ligne: 130, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
   { id: 'l-005', user_id: DEMO_USER_ID, document_type: 'devis', document_id: 'devis-005',
-    ordre: 4, description: 'Nettoyage vitres', detail: 'Intérieur et extérieur accessible',
+    ordre: 4, description: 'Prestation vitres', detail: 'Intérieur et extérieur accessible',
     quantite: 8, unite: 'pièce', prix_unitaire: 12, montant_ligne: 96, is_upsell: false, created_at: '2026-09-01T10:00:00Z' },
 
   // Facture F-0003 (Cabinet)
   { id: 'l-010', user_id: DEMO_USER_ID, document_type: 'facture', document_id: 'facture-003',
-    ordre: 0, description: 'Nettoyage bureaux', detail: 'Aspiration moquettes, essuyage bureaux et écrans',
+    ordre: 0, description: 'Prestation bureaux', detail: 'Aspiration moquettes, essuyage bureaux et écrans',
     quantite: 3, unite: 'étage', prix_unitaire: 180, montant_ligne: 540, is_upsell: false, created_at: '2026-09-05T08:00:00Z' },
   { id: 'l-011', user_id: DEMO_USER_ID, document_type: 'facture', document_id: 'facture-003',
-    ordre: 1, description: 'Nettoyage sanitaires', detail: 'Désinfection complète des 4 blocs sanitaires',
+    ordre: 1, description: 'Prestation sanitaires', detail: 'Désinfection complète des 4 blocs sanitaires',
     quantite: 4, unite: 'pièce', prix_unitaire: 45, montant_ligne: 180, is_upsell: false, created_at: '2026-09-05T08:00:00Z' },
   { id: 'l-012', user_id: DEMO_USER_ID, document_type: 'facture', document_id: 'facture-003',
-    ordre: 2, description: 'Nettoyage salle de réunion', detail: 'Vitres, tables, sièges, tableau',
+    ordre: 2, description: 'Prestation salle de réunion', detail: 'Vitres, tables, sièges, tableau',
     quantite: 1, unite: 'forfait', prix_unitaire: 130, montant_ligne: 130, is_upsell: false, created_at: '2026-09-05T08:00:00Z' },
 ]
 
@@ -155,7 +155,7 @@ export const DEMO_DEVIS = [
     numero: 'D-0003', statut: 'accepte',
     date_creation: '2026-08-01T10:00:00Z', date_validite: '2026-09-01T00:00:00Z',
     montant_ht: 1650, montant_total: 1650,
-    notes_client: 'Nettoyage complet après travaux de rénovation.', notes_internes: null,
+    notes_client: 'Prestation complet après travaux de rénovation.', notes_internes: null,
     genere_par_ia: true, prompt_ia: 'Villa 220m² après travaux rénovation complète',
     created_at: '2026-08-01T10:00:00Z', updated_at: '2026-08-03T16:00:00Z',
     clients: DEMO_CLIENTS[2],
@@ -176,7 +176,7 @@ export const DEMO_DEVIS = [
     date_creation: '2026-09-01T10:00:00Z', date_validite: '2026-10-01T00:00:00Z',
     montant_ht: 628.5, montant_total: 628.5,
     notes_client: "Sous réserve de disponibilité d'eau et d'électricité.", notes_internes: null,
-    genere_par_ia: true, prompt_ia: 'Nettoyage maison 75m²',
+    genere_par_ia: true, prompt_ia: 'Prestation maison 75m²',
     created_at: '2026-09-01T10:00:00Z', updated_at: '2026-09-01T10:05:00Z',
     clients: DEMO_CLIENTS[0],
     lignes_prestation: DEMO_LIGNES.filter(l => l.document_id === 'devis-005'),
@@ -186,7 +186,7 @@ export const DEMO_DEVIS = [
     numero: 'D-0006', statut: 'en_attente',
     date_creation: '2026-09-15T14:00:00Z', date_validite: '2026-10-15T00:00:00Z',
     montant_ht: 380, montant_total: 380,
-    notes_client: 'Nettoyage état des lieux sortant.', notes_internes: null,
+    notes_client: 'Prestation état des lieux sortant.', notes_internes: null,
     genere_par_ia: true, prompt_ia: 'Appartement 65m² état des lieux sortant',
     created_at: '2026-09-15T14:00:00Z', updated_at: '2026-09-15T14:10:00Z',
     clients: DEMO_CLIENTS[4],
@@ -265,7 +265,7 @@ export const DEMO_FACTURES = [
     numero: 'F-0005', statut: 'en_attente',
     date_creation: '2026-09-20T08:00:00Z', date_echeance: '2026-10-20T00:00:00Z',
     montant_ht: 850, montant_total: 850,
-    notes_client: 'Nettoyage mensuel — Septembre 2026.', notes_internes: null,
+    notes_client: 'Prestation mensuel — Septembre 2026.', notes_internes: null,
     date_paiement: null, moyen_paiement: null,
     avoir_de_facture_id: null, taux_penalites_retard: 12, indemnite_recouvrement: 40,
     created_at: '2026-09-20T08:00:00Z', updated_at: '2026-09-20T08:00:00Z',

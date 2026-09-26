@@ -37,7 +37,7 @@ export default function DevisPage() {
       console.log('🔍 Fetching devis...')
       const { data, error } = await supabase
         .from('devis')
-        .select('*')
+        .select('*, clients(*)')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false })
 
