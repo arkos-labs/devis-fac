@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros } from '@/lib/utils'
 import type { Client, IAPrestationItem, Devis } from '@/types/database'
 import {
-  X, Plus, Zap, Loader2, ChevronDown, FileText,
+  X, Plus, Zap, Loader2, FileText,
   Trash2, Tag, Check, Mail
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -494,26 +494,22 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
                     </span>
                     {/* Sélecteur catalogue OU saisie libre */}
                     {prestationsCatalogue.length > 0 && !row.catalogueId && !row.libre ? (
-                      <div className="flex-1 relative">
-                        <select
-                          className="input appearance-none pr-8 text-sm"
-                          value=""
-                          onChange={e => {
-                            if (e.target.value === '__libre') {
-                              updateRow(row.uid, { catalogueId: undefined, libre: true, description: '' })
-                            } else {
-                              selectCatalogue(row.uid, e.target.value)
-                            }
-                          }}
-                        >
-                          <option value="">Choisir une prestation…</option>
-                          {prestationsCatalogue.map(c => (
-                            <option key={c.id} value={c.id}>{c.nom}</option>
-                          ))}
-                          <option value="__libre">✏️ Saisie libre</option>
-                        </select>
-                        <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                      </div>
+                      <Select
+                        className="flex-1"
+                        value=""
+                        onChange={v => {
+                          if (v === '__libre') {
+                            updateRow(row.uid, { catalogueId: undefined, libre: true, description: '' })
+                          } else {
+                            selectCatalogue(row.uid, v)
+                          }
+                        }}
+                        options={[
+                          { value: '', label: 'Choisir une prestation…' },
+                          ...prestationsCatalogue.map(c => ({ value: c.id, label: c.nom })),
+                          { value: '__libre', label: '✏️ Saisie libre' },
+                        ]}
+                      />
                     ) : (
                       <input
                         placeholder="Prestation (ex : Canapé 3 places)"
