@@ -368,7 +368,14 @@ export default function DevisPage() {
                     <td className="font-bold">{formatEuros(d.montant_total)}</td>
                     <td>
                       {d.signature_activee ? (
-                        <span className={`${cfg.cls} badge font-semibold text-xs`} title="Signature électronique activée — le statut se met à jour automatiquement">
+                        <span
+                          className={`${cfg.cls} badge font-semibold text-xs`}
+                          title={
+                            d.statut === 'signe' && d.signature_nom_signataire
+                              ? `Signé par ${d.signature_nom_signataire}${d.signature_date ? ' le ' + formatDate(d.signature_date) : ''}`
+                              : 'Signature électronique activée — le statut se met à jour automatiquement'
+                          }
+                        >
                           {d.statut === 'en_attente' ? 'En attente de signature' : cfg.label}
                         </span>
                       ) : (

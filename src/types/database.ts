@@ -79,6 +79,7 @@ export interface Devis {
   signature_activee?: boolean
   signature_token?: string
   signature_date?: string | null
+  signature_nom_signataire?: string | null
   created_at: string
   updated_at: string
   // Relations jointes
@@ -94,15 +95,26 @@ export interface DevisSignaturePublic {
   devis?: {
     id: string; numero: string; titre: string | null; statut: StatutDevis
     date_creation: string; date_validite: string | null
-    montant_total: number; notes_client: string | null
+    montant_ht: number; montant_total: number; notes_client: string | null
     signature_date: string | null
+    signature_nom_signataire: string | null
   }
-  client?: { nom: string; nom_entreprise: string | null }
-  entreprise?: { nom_entreprise: string; logo_url: string | null }
+  client?: {
+    nom: string; nom_entreprise: string | null; type_client: TypeClient
+    email: string | null; telephone: string | null
+    adresse: string | null; ville: string | null; code_postal: string | null
+    siret: string | null; tva_intracommunautaire: string | null
+  }
+  entreprise?: {
+    nom_entreprise: string; logo_url: string | null
+    siret: string | null; adresse_entreprise: string | null
+    telephone_entreprise: string | null; email_entreprise: string | null
+    mentions_legales: string | null
+  }
   lignes?: Array<{
     description: string; detail: string | null
     quantite: number; unite: string
-    prix_unitaire: number; montant_ligne: number; is_upsell: boolean
+    prix_unitaire: number; montant_ligne: number
   }>
 }
 
@@ -230,7 +242,7 @@ export type Database = {
       get_clients_a_relancer:       { Args: { p_user_id: string }; Returns: ClientARelancer[] }
       envoyer_relance:              { Args: { p_user_id: string; p_client_id: string }; Returns: Record<string, any> }
       get_devis_signature:          { Args: { p_token: string }; Returns: DevisSignaturePublic }
-      repondre_devis_signature:     { Args: { p_token: string; p_reponse: 'signe' | 'refuse' }; Returns: { success: boolean; error?: string; statut?: string } }
+      repondre_devis_signature:     { Args: { p_token: string; p_reponse: 'signe' | 'refuse'; p_nom?: string }; Returns: { success: boolean; error?: string; statut?: string } }
     }
   }
 }

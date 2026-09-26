@@ -266,8 +266,30 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
     text(ctx, "Pas d'escompte pour paiement anticipé.", MARGIN, 8, false, rgb(0.5, 0.5, 0.55))
     ctx.y -= 16
   } else {
-    text(ctx, "Bon pour accord, précédé de la mention manuscrite, daté et signé :", MARGIN, 9, false, rgb(0.5, 0.5, 0.55))
+    const d = document as Devis
+    if (d.statut === 'signe' && d.signature_nom_signataire) {
+      text(ctx, 'Devis accepté — signature électronique', MARGIN, 9, true, rgb(0.06, 0.4, 0.2))
+    } else {
+      text(ctx, "Bon pour accord, précédé de la mention manuscrite, daté et signé :", MARGIN, 9, false, rgb(0.5, 0.5, 0.55))
+    }
     ctx.y -= 40
+  }
+
+  // ── Signature du client (si signature électronique) ──────
+  const devisSigneElectroniquement = isDevis && (document as Devis).statut === 'signe' && !!(document as Devis).signature_nom_signataire
+  if (devisSigneElectroniquement) {
+    const d = document as Devis
+    ensureSpace(ctx, 70)
+    const clientSigY = ctx.y
+    text(ctx, 'Le Client', MARGIN, 8, true, rgb(0.6, 0.6, 0.65))
+    ctx.y -= 14
+    text(ctx, d.signature_nom_signataire!, MARGIN, 14, true, rgb(0.1, 0.1, 0.12))
+    ctx.y -= 14
+    if (d.signature_date) {
+      text(ctx, `Signé électroniquement le ${formatDateLong(d.signature_date)}`, MARGIN, 8, false, rgb(0.5, 0.5, 0.55))
+      ctx.y -= 12
+    }
+    ctx.y = clientSigY
   }
 
   // ── Signature du prestataire ──────────────────────────────
