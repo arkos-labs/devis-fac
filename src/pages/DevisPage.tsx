@@ -6,13 +6,14 @@ import { formatEuros, formatDate } from '@/lib/utils'
 import type { Devis, Client } from '@/types/database'
 import {
   Plus, Search, Zap, FileText,
-  ChevronDown, ArrowRight, Copy, Eye, Pencil, Download, Loader2
+  ChevronDown, ArrowRight, Copy, Eye, Pencil, Download, Loader2, Archive
 } from 'lucide-react'
 import PrintModal from '@/components/pdf/PrintModal'
 import DevisModal, { type LigneForm, type DevisFormData } from '@/components/devis/DevisModal'
 import toast from 'react-hot-toast'
 import { DEMO_DEVIS } from '@/lib/mockData'
 import { useDocumentDownload } from '@/lib/useDocumentDownload'
+import { useMonthArchive } from '@/lib/useMonthArchive'
 
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -20,11 +21,13 @@ export default function DevisPage() {
   const { user } = useAuth()
   const qc = useQueryClient()
   const { download, downloadingId } = useDocumentDownload()
+  const { exportMonth, isExporting } = useMonthArchive()
   const [search, setSearch] = useState('')
   const [filterStatut, setFilterStatut] = useState<string>('tous')
   const [showModal, setShowModal] = useState(false)
   const [editingDevis, setEditingDevis] = useState<Devis | null>(null)
   const [printDoc, setPrintDoc] = useState<Devis | null>(null)
+  const [exportMonthValue, setExportMonthValue] = useState(() => new Date().toISOString().slice(0, 7))
 
   // ── Queries ──────────────────────────────────────────────────
   const { data: devisList = [], isLoading } = useQuery<Devis[]>({
@@ -230,6 +233,24 @@ export default function DevisPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-slate-800">Devis</h1>
           <p className="text-sm text-slate-500">{devisList.length} devis au total</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="month"
+            value={exportMonthValue}
+            onChange={e => setExportMonthValue(e.target.value)}
+            className="input text-sm"
+            title="Mois à exporter"
+          />
+          <button
+            onClick={() => exportMonth(devisList, 'devis', exportMonthValue)}
+            disabled={isExporting}
+            className="btn-secondary gap-2"
+            title="Télécharger tous les devis du mois sélectionné dans un ZIP"
+          >
+            {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}
+            Exporter le mois
+          </button>
         </div>
         <button id="add-devis-btn" onClick={openNew} className="btn-primary">
           <Plus size={16} /> Nouveau devis

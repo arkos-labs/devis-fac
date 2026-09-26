@@ -49,14 +49,14 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
   const docAvisCount = (document as any).nombre_avis_google_snapshot ?? parametres.nombre_avis_google ?? 0
 
   return (
-    <div className="bg-white p-12 md:p-16 w-full max-w-4xl border border-transparent print:border-none print:shadow-none print:m-0 print:p-0 mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="bg-white p-8 md:p-10 w-full max-w-4xl border border-transparent print:border-none print:shadow-none print:m-0 print:p-0 mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
 
-      <header className="flex justify-between items-end border-b-2 border-neutral-900 pb-6 mb-10 gap-4">
+      <header className="flex justify-between items-end border-b-2 border-neutral-900 pb-4 mb-6 gap-4">
         <div className="flex flex-col items-start">
           {parametres.logo_url ? (
-            <img src={parametres.logo_url} alt="Logo de l'entreprise" className="h-16 w-auto object-contain mb-5" />
+            <img src={parametres.logo_url} alt="Logo de l'entreprise" className="h-20 w-auto object-contain mb-3" />
           ) : (
-            <div className="text-2xl font-bold text-neutral-900 mb-5">{parametres.nom_entreprise}</div>
+            <div className="text-2xl font-bold text-neutral-900 mb-3">{parametres.nom_entreprise}</div>
           )}
           <h1 className="text-4xl font-light text-neutral-900 tracking-widest uppercase">{titre}</h1>
           {(document as any).titre && (
@@ -74,7 +74,7 @@ export default function DocumentPDF({ document, type, parametres, lignes }: Docu
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-6 mb-12 break-inside-avoid">
+      <section className="grid grid-cols-2 gap-6 mb-8 break-inside-avoid">
         {/* Carte 1 : ÉMETTEUR */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-between">
           <div>

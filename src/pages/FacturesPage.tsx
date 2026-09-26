@@ -6,13 +6,14 @@ import { formatEuros, formatDate } from '@/lib/utils'
 import type { Facture, Client } from '@/types/database'
 import {
   Search, ChevronDown, Receipt, CheckCircle,
-  AlertCircle, Clock, X, Eye, RotateCcw, Info, Download, Loader2
+  AlertCircle, Clock, X, Eye, RotateCcw, Info, Download, Loader2, Archive
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PrintModal from '@/components/pdf/PrintModal'
 import { DEMO_FACTURES } from '@/lib/mockData'
 import { cn } from '@/lib/utils'
 import { useDocumentDownload } from '@/lib/useDocumentDownload'
+import { useMonthArchive } from '@/lib/useMonthArchive'
 
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -35,6 +36,8 @@ export default function FacturesPage() {
   const { user } = useAuth()
   const qc = useQueryClient()
   const { download, downloadingId } = useDocumentDownload()
+  const { exportMonth, isExporting } = useMonthArchive()
+  const [exportMonthValue, setExportMonthValue] = useState(() => new Date().toISOString().slice(0, 7))
   const [search, setSearch]           = useState('')
   const [filterStatut, setFilterStatut] = useState('tous')
   const [payingFacture, setPayingFacture] = useState<Facture | null>(null)
@@ -172,15 +175,33 @@ export default function FacturesPage() {
     <div className="max-w-6xl mx-auto space-y-6">
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Factures</h1>
           <p className="text-sm text-slate-500">{factures.filter(f => f.montant_total > 0).length} facture(s)</p>
         </div>
-        {/* Mention conformité */}
-        <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
-          <CheckCircle size={12} />
-          Conforme loi anti-fraude
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="month"
+            value={exportMonthValue}
+            onChange={e => setExportMonthValue(e.target.value)}
+            className="input text-sm"
+            title="Mois à exporter"
+          />
+          <button
+            onClick={() => exportMonth(factures, 'facture', exportMonthValue)}
+            disabled={isExporting}
+            className="btn-secondary gap-2"
+            title="Télécharger toutes les factures du mois sélectionné dans un ZIP"
+          >
+            {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Archive size={16} />}
+            Exporter le mois
+          </button>
+          {/* Mention conformité */}
+          <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+            <CheckCircle size={12} />
+            Conforme loi anti-fraude
+          </div>
         </div>
       </div>
 
