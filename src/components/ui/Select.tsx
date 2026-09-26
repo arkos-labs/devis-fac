@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,22 +18,45 @@ interface Props {
 
 // Dropdown custom (remplace <select> natif) : la liste des options des selects
 // natifs ne peut pas être stylée finement selon les navigateurs/OS.
+// Le menu est rendu dans un portail (document.body) en position "fixed" pour
+// ne jamais être rogné par un ancêtre en overflow:hidden/auto (ex: une modale
+// scrollable) — sinon seules les premières options restaient visibles.
 export default function Select({ value, onChange, options, className, buttonClassName }: Props) {
   const [open, setOpen] = useState(false)
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const current = options.find(o => o.value === value)
+
+  const updateRect = () => {
+    if (!ref.current) return
+    const r = ref.current.getBoundingClientRect()
+    setRect({ top: r.bottom + 6, left: r.left, width: r.width })
+  }
+
+  useLayoutEffect(() => {
+    if (open) updateRect()
+  }, [open])
 
   useEffect(() => {
     if (!open) return
     const onClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (ref.current?.contains(target)) return
+      if (menuRef.current?.contains(target)) return
+      setOpen(false)
     }
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    const onReposition = () => updateRect()
     document.addEventListener('mousedown', onClickOutside)
     document.addEventListener('keydown', onEsc)
+    window.addEventListener('scroll', onReposition, true)
+    window.addEventListener('resize', onReposition)
     return () => {
       document.removeEventListener('mousedown', onClickOutside)
       document.removeEventListener('keydown', onEsc)
+      window.removeEventListener('scroll', onReposition, true)
+      window.removeEventListener('resize', onReposition)
     }
   }, [open])
 
@@ -50,8 +74,12 @@ export default function Select({ value, onChange, options, className, buttonClas
         <ChevronDown size={14} className={cn('text-slate-400 flex-shrink-0 transition-transform duration-150', open && 'rotate-180')} />
       </button>
 
-      {open && (
-        <div className="absolute z-20 mt-1.5 w-full min-w-max max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg py-1.5 animate-slide-up">
+      {open && rect && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 9999 }}
+          className="min-w-max max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg py-1.5 animate-slide-up"
+        >
           {options.map(o => {
             const isSelected = o.value === value
             return (
@@ -69,7 +97,8 @@ export default function Select({ value, onChange, options, className, buttonClas
               </button>
             )
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

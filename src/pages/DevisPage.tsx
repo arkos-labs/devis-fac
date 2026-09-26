@@ -147,6 +147,7 @@ export default function DevisPage() {
   // ── Mise à jour statut ───────────────────────────────────────
   const updateStatut = useMutation({
     mutationFn: async ({ id, statut }: { id: string; statut: string }) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour modifier un devis')
       const { error } = await supabase.from('devis').update({ statut }).eq('id', id)
       if (error) throw error
     },
@@ -160,6 +161,7 @@ export default function DevisPage() {
   // ── Dupliquer devis ──────────────────────────────────────────
   const dupliquerDevis = useMutation({
     mutationFn: async (devis: Devis) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour dupliquer un devis')
       const { data: lignesOriginales, error: errLignes } = await supabase
         .from('lignes_prestation')
         .select('*')
@@ -339,8 +341,9 @@ export default function DevisPage() {
                     <td>
                       <select
                         value={d.statut}
+                        disabled={!isSubscribed}
                         onChange={e => updateStatut.mutate({ id: d.id, statut: e.target.value })}
-                        className={`${cfg.cls} badge cursor-pointer border-0 bg-transparent font-semibold text-xs`}
+                        className={`${cfg.cls} badge border-0 bg-transparent font-semibold text-xs ${isSubscribed ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
                       >
                         {Object.entries(STATUT_CONFIG).map(([k, v]) => (
                           <option key={k} value={k}>{v.label}</option>
@@ -350,9 +353,10 @@ export default function DevisPage() {
                     <td>
                       <div className="flex items-center gap-1">
                         <button
-                          title="Modifier"
+                          title={isSubscribed ? 'Modifier' : 'Abonnement requis'}
+                          disabled={!isSubscribed}
                           onClick={() => { setEditingDevis(d); setShowModal(true) }}
-                          className="btn-icon btn-ghost btn-sm text-blue-600 hover:bg-blue-50"
+                          className="btn-icon btn-ghost btn-sm text-blue-600 hover:bg-blue-50 disabled:opacity-30"
                         >
                           <Pencil size={14} />
                         </button>
@@ -384,9 +388,9 @@ export default function DevisPage() {
                           <ArrowRight size={12} /> Facturer
                         </button>
                         <button
-                          title="Dupliquer"
+                          title={isSubscribed ? 'Dupliquer' : 'Abonnement requis'}
                           className="btn-icon btn-ghost btn-sm disabled:opacity-30"
-                          disabled={dupliquerDevis.isPending}
+                          disabled={dupliquerDevis.isPending || !isSubscribed}
                           onClick={() => {
                             if (confirm(`Dupliquer le devis ${d.numero} ?`)) {
                               dupliquerDevis.mutate(d)
