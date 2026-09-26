@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros } from '@/lib/utils'
-import type { Client, IAPrestationItem, Devis } from '@/types/database'
+import type { Client, Facture } from '@/types/database'
 import {
-  X, Plus, Zap, Loader2, ChevronDown,
-  Trash2, Tag, Check, Mail
+  X, Plus, ChevronDown,
+  Trash2, Tag, Check, Mail, Loader2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -24,10 +24,9 @@ export interface ClientForm {
 }
 const INITIAL_CLIENT: ClientForm = { nom: '', email: '', telephone: '', adresse: '', ville: '', code_postal: '' }
 
-export interface DevisFormData {
-  client_id: string; date_validite: string
+export interface FactureFormData {
+  client_id: string; date_echeance: string
   notes_client: string; notes_internes: string
-  genere_par_ia: boolean; prompt_ia: string
   titre: string
 }
 
@@ -36,7 +35,7 @@ interface CatItem {
   parent_id: string | null; is_upsell: boolean
 }
 
-// Une prestation dans le devis
+// Une prestation dans la facture
 interface PrestationRow {
   uid: number           // clé locale unique
   catalogueId?: string  // si vient du catalogue
@@ -50,8 +49,8 @@ interface PrestationRow {
 }
 
 interface Props {
-  editingDevis?: Devis | null
-  onSave: (form: DevisFormData, lignes: LigneForm[]) => void
+  editingFacture?: Facture | null
+  onSave: (form: FactureFormData, lignes: LigneForm[]) => void
   onClose: () => void
   isSaving: boolean
 }
@@ -69,38 +68,33 @@ const dateIn30Days = () => {
   return d.toISOString().slice(0, 10)
 }
 
-export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: Props) {
+export default function FactureModal({ editingFacture, onSave, onClose, isSaving }: Props) {
   const { user } = useAuth()
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
-  const [form, setForm] = useState<DevisFormData>({
-    client_id: '', date_validite: dateIn30Days(), notes_client: '',
-    notes_internes: '', genere_par_ia: false, prompt_ia: '', titre: ''
+  const [form, setForm] = useState<FactureFormData>({
+    client_id: '', date_echeance: dateIn30Days(), notes_client: '',
+    notes_internes: '', titre: ''
   })
-  const [showIA, setShowIA] = useState(false)
-  const [promptIA, setPromptIA] = useState('')
-  const [iaLoading, setIALoading] = useState(false)
 
-  // Initialize from editingDevis
+  // Initialize from editingFacture
   useEffect(() => {
-    if (editingDevis) {
+    if (editingFacture) {
       setForm({
-        client_id: editingDevis.client_id,
-        date_validite: editingDevis.date_validite || dateIn30Days(),
-        notes_client: editingDevis.notes_client || '',
-        notes_internes: editingDevis.notes_internes || '',
-        genere_par_ia: editingDevis.genere_par_ia,
-        prompt_ia: editingDevis.prompt_ia || '',
-        titre: editingDevis.titre || ''
+        client_id: editingFacture.client_id,
+        date_echeance: editingFacture.date_echeance || dateIn30Days(),
+        notes_client: editingFacture.notes_client || '',
+        notes_internes: editingFacture.notes_internes || '',
+        titre: editingFacture.titre || ''
       })
-      if (editingDevis.lignes_prestation && editingDevis.lignes_prestation.length > 0) {
-        const sortedLignes = [...editingDevis.lignes_prestation].sort((a, b) => a.ordre - b.ordre)
+      if (editingFacture.lignes_prestation && editingFacture.lignes_prestation.length > 0) {
+        const sortedLignes = [...editingFacture.lignes_prestation].sort((a, b) => a.ordre - b.ordre)
         const newRows: PrestationRow[] = []
-        
+
         for (const ligne of sortedLignes) {
           if (!ligne.is_upsell) {
             newRows.push({
               uid: ++UID,
-              catalogueId: undefined, // Catalogue link not preserved in db directly for now
+              catalogueId: undefined,
               libre: true,
               description: ligne.description,
               prix: ligne.prix_unitaire,
@@ -122,7 +116,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
         }
       }
     }
-  }, [editingDevis])
+  }, [editingFacture])
 
   const qc = useQueryClient()
   const [showNewClient, setShowNewClient] = useState(false)
@@ -262,51 +256,9 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
     return result
   }
 
-  // ── IA ────────────────────────────────────────────────────────
-  const genererIA = async () => {
-    if (!promptIA.trim()) return toast.error('Décrivez la prestation')
-    setIALoading(true)
-    try {
-      const key = import.meta.env.VITE_OPENAI_API_KEY as string
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini', temperature: 0.4,
-          response_format: { type: 'json_object' },
-          messages: [
-            {
-              role: 'system',
-              content: `Expert nettoyage France. JSON: {"prestations":[{"description":"...","quantite":1,"unite":"forfait","prix_unitaire":0,"options":[{"description":"...","prix":0}]}],"notes_client":"..."}`
-            },
-            { role: 'user', content: `Génère un devis pour : "${promptIA}"` }
-          ],
-        }),
-      })
-      if (!res.ok) throw new Error((await res.json()).error?.message ?? 'Erreur OpenAI')
-      const r = await res.json()
-      const parsed = JSON.parse(r.choices[0].message.content)
-      setRows(parsed.prestations.map((p: IAPrestationItem & { options?: Array<{ description: string; prix: number }> }) => newRow({
-        libre: true,
-        description: p.description,
-        quantite: p.quantite ?? 1,
-        unite: p.unite ?? 'forfait',
-        prix: p.prix_unitaire ?? 0,
-        options: p.options ?? [],
-      })))
-      setForm(f => ({ ...f, notes_client: parsed.notes_client ?? '', genere_par_ia: true, prompt_ia: promptIA }))
-      setShowIA(false)
-      toast.success('Devis IA généré')
-    } catch (e) {
-      toast.error(`Erreur IA : ${(e as Error).message}`)
-    } finally {
-      setIALoading(false)
-    }
-  }
-
   const handleSave = () => {
     if (!form.client_id) return toast.error('Sélectionnez un client')
-    if (!form.titre.trim()) return toast.error('Ajoutez un titre au devis')
+    if (!form.titre.trim()) return toast.error('Ajoutez un titre à la facture')
     if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
     onSave(form, toLignes())
   }
@@ -316,9 +268,9 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
     const email = selectedClient?.email || ''
     if (!email) return toast.error("Ce client n'a pas d'email renseigné")
     const total = totalAvecOptions
-    const subject = encodeURIComponent(`Devis — ${form.titre || 'Prestation nettoyage'}`)
-    const valDate = form.date_validite ? new Date(form.date_validite).toLocaleDateString('fr-FR') : '—'
-    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${form.titre || 'prestation nettoyage'}.\n\nMontant total : ${formatEuros(total)}\nValidité : jusqu'au ${valDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
+    const subject = encodeURIComponent(`Facture — ${form.titre || 'Prestation nettoyage'}`)
+    const echDate = form.date_echeance ? new Date(form.date_echeance).toLocaleDateString('fr-FR') : '—'
+    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre facture pour : ${form.titre || 'prestation nettoyage'}.\n\nMontant total : ${formatEuros(total)}\nÉchéance : ${echDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
     window.open(`mailto:${email}?subject=${subject}&body=${body}`)
   }
 
@@ -330,38 +282,12 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
         {/* ── Header ──────────────────────────────────────── */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100">
           <h2 className="text-base font-bold text-slate-800">
-            {editingDevis ? `Modifier ${editingDevis.numero}` : 'Nouveau devis'}
+            {editingFacture ? `Modifier ${editingFacture.numero}` : 'Nouvelle facture'}
           </h2>
-          <div className="flex items-center gap-2">
-            {!editingDevis && (
-              <button onClick={() => setShowIA(v => !v)}
-                className="btn-sm btn bg-gradient-to-r from-violet-600 to-blue-600 text-white gap-1.5">
-                <Zap size={12} /> Auto
-              </button>
-            )}
-            <button onClick={onClose} className="btn-icon btn-ghost"><X size={17} /></button>
-          </div>
+          <button onClick={onClose} className="btn-icon btn-ghost"><X size={17} /></button>
         </div>
 
         <div className="p-5 space-y-5">
-
-          {/* ── IA ──────────────────────────────────────────── */}
-          {showIA && (
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-200">
-              <p className="text-xs font-bold text-violet-700 mb-2">Décrivez la prestation :</p>
-              <div className="flex gap-2">
-                <input value={promptIA} onChange={e => setPromptIA(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && genererIA()}
-                  placeholder="Ex : canapé 3 places + matelas Paris…"
-                  className="input flex-1 text-sm" />
-                <button onClick={genererIA} disabled={iaLoading}
-                  className="btn-primary btn-sm gap-1.5 whitespace-nowrap">
-                  {iaLoading ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
-                  {iaLoading ? '…' : 'Générer'}
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* ── Client + Date ────────────────────────────────── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -375,20 +301,20 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
                   </button>
                 )}
               </div>
-              
+
               {showNewClient ? (
                 <div className="p-4 rounded-xl border border-brand-100 bg-brand-50/30 space-y-3 relative">
                   <button onClick={() => setShowNewClient(false)} type="button" className="absolute top-3 right-3 text-slate-400 hover:text-slate-700">
                     <X size={16} />
                   </button>
                   <p className="text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">Nouveau client</p>
-                  
+
                   <div className="form-group">
                     <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Nom complet *</label>
                     <input autoFocus value={newClientForm.nom} onChange={e => setNewClientForm(f => ({ ...f, nom: e.target.value }))}
                            placeholder="Marie Dupont" className="input text-sm py-2" />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="form-group">
                       <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Email</label>
@@ -401,13 +327,13 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
                              placeholder="06 12 34 56 78" className="input text-sm py-2" />
                     </div>
                   </div>
-                  
+
                   <div className="form-group">
                     <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Adresse</label>
                     <input value={newClientForm.adresse} onChange={e => setNewClientForm(f => ({ ...f, adresse: e.target.value }))}
                            placeholder="12 rue de la Paix" className="input text-sm py-2" />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="form-group">
                       <label className="text-[11px] font-semibold text-slate-500 mb-1 block">Ville</label>
@@ -440,16 +366,16 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
               )}
             </div>
             <div className="form-group">
-              <label className="label">Validité du devis</label>
-              <input type="date" className="input" value={form.date_validite}
-                onChange={e => setForm(f => ({ ...f, date_validite: e.target.value }))} />
+              <label className="label">Échéance de paiement</label>
+              <input type="date" className="input" value={form.date_echeance}
+                onChange={e => setForm(f => ({ ...f, date_echeance: e.target.value }))} />
               <p className="text-[10px] text-slate-400 mt-1">Par défaut : 30 jours à compter d'aujourd'hui</p>
             </div>
           </div>
 
-          {/* ── Titre du devis ────────────────────────────────── */}
+          {/* ── Titre de la facture ────────────────────────────── */}
           <div className="form-group">
-            <label className="label">Titre du devis *</label>
+            <label className="label">Titre de la facture *</label>
             <input
               className="input font-semibold text-base"
               placeholder="Ex : Nettoyage de Diogène 45m² — Appartement Toulouse"
@@ -457,15 +383,15 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
               onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              Apparaitra en haut du devis et de la facture PDF
+              Apparaitra en haut de la facture PDF
             </p>
           </div>
 
           {/* ── Liste des prestations ────────────────────────── */}
           <div className="space-y-3">
             <div>
-              <label className="label">Prestations incluses *</label>
-              <p className="text-[11px] text-slate-400 -mt-1">Numérotées dans l'ordre — listez tout ce qui est compris de base.</p>
+              <label className="label">Prestations facturées *</label>
+              <p className="text-[11px] text-slate-400 -mt-1">Numérotées dans l'ordre — listez tout ce qui est compris.</p>
             </div>
             {rows.map((row, rowIndex) => {
               const upsells = row.catalogueId ? upsellsOf(row.catalogueId) : []
@@ -665,7 +591,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
             <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 gap-1.5">
               {isSaving
                 ? <><Loader2 size={13} className="animate-spin" /> Enregistrement…</>
-                : editingDevis
+                : editingFacture
                   ? 'Mettre à jour'
                   : `Créer${totalAvecOptions > 0 ? ' — ' + formatEuros(totalAvecOptions) : ''}`
               }

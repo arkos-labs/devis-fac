@@ -5,11 +5,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros, formatDate } from '@/lib/utils'
 import type { Facture, Client } from '@/types/database'
 import {
-  Search, ChevronDown, Receipt, CheckCircle,
+  Plus, Search, ChevronDown, Receipt, CheckCircle,
   AlertCircle, Clock, X, Eye, RotateCcw, Info, Download, Loader2, Archive
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PrintModal from '@/components/pdf/PrintModal'
+import FactureModal, { type LigneForm, type FactureFormData } from '@/components/factures/FactureModal'
 import { DEMO_FACTURES } from '@/lib/mockData'
 import { cn } from '@/lib/utils'
 import { useDocumentDownload } from '@/lib/useDocumentDownload'
@@ -45,6 +46,8 @@ export default function FacturesPage() {
   const [payDate, setPayDate]         = useState(new Date().toISOString().slice(0, 10))
   const [printDoc, setPrintDoc]       = useState<Facture | null>(null)
   const [avoirTarget, setAvoirTarget] = useState<Facture | null>(null)
+  const [showModal, setShowModal]     = useState(false)
+  const [editingFacture, setEditingFacture] = useState<Facture | null>(null)
 
   // ── Query ────────────────────────────────────────────────────
   const { data: factures = [], isLoading } = useQuery<Facture[]>({
@@ -60,6 +63,74 @@ export default function FacturesPage() {
     },
     enabled: !!user,
     initialData: IS_DEMO ? DEMO_FACTURES : undefined,
+  })
+
+  // ── Mutation créer/modifier facture ───────────────────────────
+  const saveFacture = useMutation({
+    mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: LigneForm[] }) => {
+      let factureId: string
+
+      if (editingFacture) {
+        const { error } = await supabase.from('factures').update({
+          client_id: form.client_id,
+          date_echeance: form.date_echeance || null,
+          notes_client: form.notes_client || null,
+          notes_internes: form.notes_internes || null,
+          titre: form.titre || null,
+        }).eq('id', editingFacture.id)
+        if (error) throw error
+        factureId = editingFacture.id
+        await supabase.from('lignes_prestation')
+          .delete().eq('document_id', factureId).eq('document_type', 'facture')
+      } else {
+        const { data: numero, error: numError } = await supabase.rpc('get_next_numero', {
+          p_user_id: user!.id, p_type: 'facture'
+        })
+        if (numError) throw numError
+
+        const { data: params } = await supabase
+          .from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', user!.id).single()
+
+        const { data: newFacture, error } = await supabase.from('factures').insert({
+          user_id: user!.id,
+          client_id: form.client_id,
+          devis_id: null,
+          numero: numero as string,
+          date_creation: new Date().toISOString(),
+          date_echeance: form.date_echeance || null,
+          notes_client: form.notes_client || null,
+          notes_internes: form.notes_internes || null,
+          titre: form.titre || null,
+          statut: 'en_attente',
+          note_google_snapshot: params?.note_google ?? null,
+          nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
+        }).select().single()
+        if (error) throw error
+        factureId = newFacture.id
+      }
+
+      const { error: lignesError } = await supabase.from('lignes_prestation').insert(
+        lignes.map((l, i) => ({
+          user_id: user!.id,
+          document_type: 'facture' as const,
+          document_id: factureId,
+          ordre: i,
+          description: l.description,
+          detail: l.detail || null,
+          quantite: l.quantite,
+          unite: l.unite,
+          prix_unitaire: l.prix_unitaire,
+        }))
+      )
+      if (lignesError) throw lignesError
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['factures', user?.id] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      toast.success(editingFacture ? 'Facture mise à jour !' : 'Facture créée !')
+      closeModal()
+    },
+    onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
 
   // ── Marquer payée ────────────────────────────────────────────
@@ -155,6 +226,10 @@ export default function FacturesPage() {
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
 
+  // ── Helpers ──────────────────────────────────────────────────
+  const openNew = () => { setEditingFacture(null); setShowModal(true) }
+  const closeModal = () => { setShowModal(false); setEditingFacture(null) }
+
   // ── Filtres ──────────────────────────────────────────────────
   const filtered = factures.filter(f => {
     const client = f.clients as Client | undefined
@@ -203,6 +278,9 @@ export default function FacturesPage() {
             Conforme loi anti-fraude
           </div>
         </div>
+        <button id="add-facture-btn" onClick={openNew} className="btn-primary">
+          <Plus size={16} /> Nouvelle facture
+        </button>
       </div>
 
       {/* ── Résumé financier ────────────────────────────────── */}
@@ -375,6 +453,16 @@ export default function FacturesPage() {
       {/* ── Modal PDF ─────────────────────────────────────────── */}
       {printDoc && (
         <PrintModal document={printDoc} type="facture" onClose={() => setPrintDoc(null)} />
+      )}
+
+      {/* ── Modal création facture ────────────────────────────── */}
+      {showModal && (
+        <FactureModal
+          editingFacture={editingFacture}
+          onSave={(form, lignes) => saveFacture.mutate({ form, lignes })}
+          onClose={closeModal}
+          isSaving={saveFacture.isPending}
+        />
       )}
 
       {/* ── Modal paiement ────────────────────────────────────── */}
