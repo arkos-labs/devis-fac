@@ -123,7 +123,7 @@ export default function DevisPage() {
 
       if (isNew) {
         const { data: fullDevis } = await supabase
-          .from('devis').select('*, clients(email)').eq('id', devisId).single()
+          .from('devis').select('*, clients(*)').eq('id', devisId).single()
         return fullDevis as unknown as Devis
       }
       return null
