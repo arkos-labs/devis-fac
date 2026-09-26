@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros } from '@/lib/utils'
 import type { Client, Facture } from '@/types/database'
 import {
-  X, Plus, ChevronDown,
+  X, Plus, ChevronDown, Receipt,
   Trash2, Tag, Check, Mail, Loader2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Select from '@/components/ui/Select'
 
 // ── Types ─────────────────────────────────────────────────────
 export interface LigneForm {
@@ -277,20 +278,36 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
          onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto animate-slide-up">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-slide-up">
 
         {/* ── Header ──────────────────────────────────────── */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-100">
-          <h2 className="text-base font-bold text-slate-800">
-            {editingFacture ? `Modifier ${editingFacture.numero}` : 'Nouvelle facture'}
-          </h2>
-          <button onClick={onClose} className="btn-icon btn-ghost"><X size={17} /></button>
+        <div className="shrink-0 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 px-6 py-5">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
+          <div className="absolute -bottom-14 -left-6 w-32 h-32 rounded-full bg-white/5" />
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                <Receipt size={18} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-white truncate">
+                  {editingFacture ? `Modifier ${editingFacture.numero}` : 'Nouvelle facture'}
+                </h2>
+                <p className="text-xs text-white/70">
+                  {editingFacture ? 'Mise à jour de la facture' : 'Créer une facture pour un client'}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 rounded-xl text-white/80 hover:bg-white/15 hover:text-white transition-colors flex-shrink-0">
+              <X size={17} />
+            </button>
+          </div>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
 
           {/* ── Client + Date ────────────────────────────────── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="form-group sm:col-span-2">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="label !mb-0">Client *</label>
@@ -354,15 +371,14 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
                   </div>
                 </div>
               ) : (
-                <div className="relative">
-                  <select required value={form.client_id}
-                    onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}
-                    className="input appearance-none pr-8">
-                    <option value="">Sélectionner…</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-                  </select>
-                  <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
+                <Select
+                  value={form.client_id}
+                  onChange={v => setForm(f => ({ ...f, client_id: v }))}
+                  options={[
+                    { value: '', label: 'Sélectionner…' },
+                    ...clients.map(c => ({ value: c.id, label: c.nom })),
+                  ]}
+                />
               )}
             </div>
             <div className="form-group">
@@ -396,9 +412,9 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
             {rows.map((row, rowIndex) => {
               const upsells = row.catalogueId ? upsellsOf(row.catalogueId) : []
               return (
-                <div key={row.uid} className="rounded-2xl border border-slate-200 overflow-hidden">
+                <div key={row.uid} className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-150">
                   {/* ─ Ligne principale avec numéro ─ */}
-                  <div className="flex items-center gap-2 p-3 bg-slate-50/50">
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-slate-50 to-white">
                     <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {rowIndex + 1}
                     </span>
@@ -554,33 +570,35 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
                   <span className="text-sm font-bold text-violet-700">+{formatEuros(totalOptions)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between px-4 py-3 bg-brand-50">
-                <span className="text-sm font-bold text-brand-800">Total avec options</span>
-                <span className="text-lg font-extrabold text-brand-800">{formatEuros(totalAvecOptions)}</span>
+              <div className="flex items-center justify-between px-4 py-3 bg-emerald-50">
+                <span className="text-sm font-bold text-emerald-800">Total avec options</span>
+                <span className="text-lg font-extrabold text-emerald-800">{formatEuros(totalAvecOptions)}</span>
               </div>
             </div>
           )}
 
 
           {/* ── Notes ───────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 grid grid-cols-2 gap-3">
             <div className="form-group">
               <label className="label">Notes client (PDF)</label>
-              <textarea className="input resize-none text-sm" rows={2}
+              <textarea className="input resize-none text-sm bg-white" rows={2}
                 value={form.notes_client}
                 onChange={e => setForm(f => ({ ...f, notes_client: e.target.value }))}
                 placeholder="Conditions, remarques…" />
             </div>
             <div className="form-group">
               <label className="label">Notes internes</label>
-              <textarea className="input resize-none text-sm" rows={2}
+              <textarea className="input resize-none text-sm bg-white" rows={2}
                 value={form.notes_internes}
                 onChange={e => setForm(f => ({ ...f, notes_internes: e.target.value }))}
                 placeholder="Non visible sur le PDF" />
             </div>
           </div>
+        </div>
 
-          {/* ── Actions ─────────────────────────────────────── */}
+        {/* ── Actions (footer fixe) ──────────────────────────── */}
+        <div className="shrink-0 border-t border-slate-100 p-5 space-y-2 bg-white">
           <div className="flex gap-3">
             <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
             {form.client_id && (
@@ -588,7 +606,7 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
                 <Mail size={14} />
               </button>
             )}
-            <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 gap-1.5">
+            <button onClick={handleSave} disabled={isSaving} className="btn bg-emerald-600 hover:bg-emerald-700 text-white flex-1 gap-1.5">
               {isSaving
                 ? <><Loader2 size={13} className="animate-spin" /> Enregistrement…</>
                 : editingFacture
@@ -597,7 +615,6 @@ export default function FactureModal({ editingFacture, onSave, onClose, isSaving
               }
             </button>
           </div>
-
           <p className="text-[10px] text-slate-400 text-center">TVA non applicable — Art. 293 B du CGI</p>
         </div>
       </div>

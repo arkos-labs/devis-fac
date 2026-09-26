@@ -481,7 +481,7 @@ export default function FacturesPage() {
           onClick={e => e.target === e.currentTarget && setPayingFacture(null)}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 animate-slide-up">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 ring-4 ring-emerald-50 flex items-center justify-center flex-shrink-0">
                 <CheckCircle className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
@@ -524,7 +524,7 @@ export default function FacturesPage() {
           onClick={e => e.target === e.currentTarget && setAvoirTarget(null)}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 animate-slide-up">
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 ring-4 ring-red-50 flex items-center justify-center flex-shrink-0">
                 <RotateCcw className="w-5 h-5 text-red-600" />
               </div>
               <div>
