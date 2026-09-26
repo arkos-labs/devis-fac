@@ -6,18 +6,20 @@ import { formatEuros, formatDate } from '@/lib/utils'
 import type { Devis, Client } from '@/types/database'
 import {
   Plus, Search, Zap, FileText,
-  ChevronDown, ArrowRight, Copy, Eye, Pencil
+  ChevronDown, ArrowRight, Copy, Eye, Pencil, Download, Loader2
 } from 'lucide-react'
 import PrintModal from '@/components/pdf/PrintModal'
 import DevisModal, { type LigneForm, type DevisFormData } from '@/components/devis/DevisModal'
 import toast from 'react-hot-toast'
 import { DEMO_DEVIS } from '@/lib/mockData'
+import { useDocumentDownload } from '@/lib/useDocumentDownload'
 
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export default function DevisPage() {
   const { user } = useAuth()
   const qc = useQueryClient()
+  const { download, downloadingId } = useDocumentDownload()
   const [search, setSearch] = useState('')
   const [filterStatut, setFilterStatut] = useState<string>('tous')
   const [showModal, setShowModal] = useState(false)
@@ -319,6 +321,14 @@ export default function DevisPage() {
                           className="btn-icon btn-ghost btn-sm text-brand-600 hover:bg-brand-50"
                         >
                           <Eye size={14} />
+                        </button>
+                        <button
+                          title="Télécharger le PDF"
+                          disabled={downloadingId === d.id}
+                          onClick={() => download(d, 'devis')}
+                          className="btn-icon btn-ghost btn-sm text-emerald-600 hover:bg-emerald-50 disabled:opacity-30"
+                        >
+                          {downloadingId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                         </button>
                         <button
                           title="Convertir en facture"

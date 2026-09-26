@@ -6,12 +6,13 @@ import { formatEuros, formatDate } from '@/lib/utils'
 import type { Facture, Client } from '@/types/database'
 import {
   Search, ChevronDown, Receipt, CheckCircle,
-  AlertCircle, Clock, X, Eye, RotateCcw, Info
+  AlertCircle, Clock, X, Eye, RotateCcw, Info, Download, Loader2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PrintModal from '@/components/pdf/PrintModal'
 import { DEMO_FACTURES } from '@/lib/mockData'
 import { cn } from '@/lib/utils'
+import { useDocumentDownload } from '@/lib/useDocumentDownload'
 
 const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
@@ -33,6 +34,7 @@ const MOYENS = [
 export default function FacturesPage() {
   const { user } = useAuth()
   const qc = useQueryClient()
+  const { download, downloadingId } = useDocumentDownload()
   const [search, setSearch]           = useState('')
   const [filterStatut, setFilterStatut] = useState('tous')
   const [payingFacture, setPayingFacture] = useState<Facture | null>(null)
@@ -303,6 +305,16 @@ export default function FacturesPage() {
                         <button title="Aperçu PDF" onClick={() => setPrintDoc(f)}
                           className="btn-icon btn-ghost btn-sm text-brand-600 hover:bg-brand-50">
                           <Eye size={14} />
+                        </button>
+
+                        {/* Télécharger Factur-X */}
+                        <button
+                          title="Télécharger la facture (Factur-X)"
+                          disabled={downloadingId === f.id}
+                          onClick={() => download(f, 'facture')}
+                          className="btn-icon btn-ghost btn-sm text-emerald-600 hover:bg-emerald-50 disabled:opacity-30"
+                        >
+                          {downloadingId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                         </button>
 
                         {/* Marquer payée */}

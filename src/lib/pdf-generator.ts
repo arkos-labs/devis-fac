@@ -196,5 +196,30 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
     }
   }
 
+  // ── Avis Google ───────────────────────────────────────────
+  const showAvis = isDevis ? parametres.afficher_avis_sur_devis !== false : parametres.afficher_avis_sur_factures !== false
+  if (showAvis) {
+    ensureSpace(ctx, 70)
+    ctx.y -= 16
+    line(ctx, MARGIN, PAGE_W - MARGIN)
+    ctx.y -= 24
+    const docAvisNote = (document as unknown as { note_google_snapshot?: number }).note_google_snapshot ?? parametres.note_google ?? 5
+    const docAvisCount = (document as unknown as { nombre_avis_google_snapshot?: number }).nombre_avis_google_snapshot ?? parametres.nombre_avis_google ?? 0
+    const centerX = PAGE_W / 2
+    const stars = '★'.repeat(Math.round(Number(docAvisNote) || 0))
+    text(ctx, 'Avis Google', centerX - 40, 11, true, rgb(0.2, 0.2, 0.25))
+    ctx.y -= 16
+    text(ctx, stars, centerX - 40, 12, false, rgb(0.96, 0.62, 0.04))
+    ctx.y -= 16
+    text(ctx, `${docAvisNote}/5 sur ${docAvisCount} avis`, centerX - 40, 9, false, rgb(0.4, 0.4, 0.45))
+    ctx.y -= 16
+    if (parametres.avis_google_url) {
+      text(ctx, 'Satisfait(e) de notre prestation ? Laissez-nous un avis :', MARGIN, 8, false, rgb(0.5, 0.5, 0.55))
+      ctx.y -= 12
+      text(ctx, parametres.avis_google_url, MARGIN, 8, true, rgb(0.15, 0.35, 0.75))
+      ctx.y -= 12
+    }
+  }
+
   return doc.save()
 }
