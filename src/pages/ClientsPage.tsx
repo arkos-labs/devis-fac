@@ -13,12 +13,16 @@ const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 
 // ── Formulaire client ─────────────────────────────────────────
 interface ClientForm {
+  type_client: 'particulier' | 'professionnel'
   nom: string; email: string; telephone: string
+  nom_entreprise: string; siret: string; tva_intracommunautaire: string
   adresse: string; ville: string; code_postal: string; notes: string
 }
 
 const FORM_VIDE: ClientForm = {
+  type_client: 'particulier',
   nom: '', email: '', telephone: '',
+  nom_entreprise: '', siret: '', tva_intracommunautaire: '',
   adresse: '', ville: '', code_postal: '', notes: ''
 }
 
@@ -84,7 +88,8 @@ export default function ClientsPage() {
   const openNew = () => { setEditingClient(null); setForm(FORM_VIDE); setShowModal(true) }
   const openEdit = (c: Client) => {
     setEditingClient(c)
-    setForm({ nom: c.nom, email: c.email ?? '', telephone: c.telephone ?? '',
+    setForm({ type_client: c.type_client ?? 'particulier', nom: c.nom, email: c.email ?? '', telephone: c.telephone ?? '',
+      nom_entreprise: c.nom_entreprise ?? '', siret: c.siret ?? '', tva_intracommunautaire: c.tva_intracommunautaire ?? '',
       adresse: c.adresse ?? '', ville: c.ville ?? '', code_postal: c.code_postal ?? '', notes: c.notes ?? '' })
     setShowModal(true)
   }
@@ -231,8 +236,45 @@ export default function ClientsPage() {
               onSubmit={e => { e.preventDefault(); upsertClient.mutate(form) }}
               className="p-6 space-y-4"
             >
+              <div className="flex gap-4 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="type_client" value="particulier"
+                    checked={form.type_client === 'particulier'}
+                    onChange={() => setForm(f => ({ ...f, type_client: 'particulier' }))} />
+                  <span className="text-sm font-medium text-slate-700">Particulier</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="type_client" value="professionnel"
+                    checked={form.type_client === 'professionnel'}
+                    onChange={() => setForm(f => ({ ...f, type_client: 'professionnel' }))} />
+                  <span className="text-sm font-medium text-slate-700">Professionnel</span>
+                </label>
+              </div>
+
+              {form.type_client === 'professionnel' && (
+                <div className="space-y-4">
+                  <div className="form-group">
+                    <label className="label">Nom de l'entreprise *</label>
+                    <input required className="input" placeholder="Société ABC"
+                      value={form.nom_entreprise} onChange={e => setForm(f => ({ ...f, nom_entreprise: e.target.value }))} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="form-group">
+                      <label className="label">SIRET</label>
+                      <input className="input" placeholder="12345678900012"
+                        value={form.siret} onChange={e => setForm(f => ({ ...f, siret: e.target.value }))} />
+                    </div>
+                    <div className="form-group">
+                      <label className="label">TVA Intracommunautaire</label>
+                      <input className="input" placeholder="FR01123456789"
+                        value={form.tva_intracommunautaire} onChange={e => setForm(f => ({ ...f, tva_intracommunautaire: e.target.value }))} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="form-group">
-                <label className="label">Nom complet *</label>
+                <label className="label">{form.type_client === 'professionnel' ? 'Nom du contact *' : 'Nom complet *'}</label>
                 <input required className="input" placeholder="Marie Dupont"
                   value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} />
               </div>

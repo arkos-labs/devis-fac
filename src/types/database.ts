@@ -31,10 +31,16 @@ export interface ParametresCompte {
 }
 
 // ── clients ──────────────────────────────────────────────────
+export type TypeClient = 'particulier' | 'professionnel'
+
 export interface Client {
   id: string
   user_id: string
+  type_client: TypeClient
   nom: string
+  nom_entreprise: string | null
+  siret: string | null
+  tva_intracommunautaire: string | null
   email: string | null
   telephone: string | null
   adresse: string | null
