@@ -87,11 +87,15 @@ export function useDocumentDownload() {
 
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
         // Le partage natif n'a pas de champ "destinataire" (limitation de
-        // l'API) — on copie l'adresse dans le presse-papier pour qu'il n'y
-        // ait plus qu'à la coller dans le champ "À" de l'email.
-        try { await navigator.clipboard.writeText(clientEmail) } catch { /* presse-papier indisponible */ }
+        // l'API) — on copie l'adresse dans le presse-papier et on prévient
+        // AVANT d'ouvrir le sélecteur d'app, pour que le message soit vu
+        // avant que l'appli mail ne prenne l'écran.
+        let copied = false
+        try { await navigator.clipboard.writeText(clientEmail); copied = true } catch { /* presse-papier indisponible */ }
+        if (copied) {
+          toast.success(`Adresse copiée : collez-la (Ctrl+V) dans le champ "À" de l'email — ${clientEmail}`, { duration: 8000 })
+        }
         await navigator.share({ files: [file], title: subject, text: body })
-        toast.success(`Choisis ton application mail — fichier déjà joint, adresse copiée (${clientEmail}) à coller dans "À".`, { duration: 6000 })
         return
       }
 
