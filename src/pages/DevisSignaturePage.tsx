@@ -1,16 +1,72 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { formatEuros, formatDate } from '@/lib/utils'
-import type { DevisSignaturePublic } from '@/types/database'
-import { FileText, CheckCircle2, XCircle, Loader2, PenTool, ShieldCheck } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
+import type { DevisSignaturePublic, Devis, Client, ParametresCompte, LignePrestation } from '@/types/database'
+import { generateDocumentPdf } from '@/lib/pdf-generator'
+import { FileText, CheckCircle2, XCircle, Loader2, PenTool, ShieldCheck, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+// Reconstruit des objets compatibles avec le générateur PDF interne à partir
+// des données (volontairement limitées) exposées par le RPC public.
+function buildPdfInput(data: DevisSignaturePublic, token: string) {
+  const { devis, client, entreprise, lignes = [] } = data
+  if (!devis || !client || !entreprise) return null
+
+  const documentForPdf = {
+    id: devis.id, user_id: '', client_id: '', numero: devis.numero,
+    date_creation: devis.date_creation, date_validite: devis.date_validite,
+    statut: devis.statut, montant_ht: devis.montant_ht, montant_total: devis.montant_total,
+    notes_client: devis.notes_client, notes_internes: null, titre: devis.titre,
+    genere_par_ia: false, prompt_ia: null,
+    note_google_snapshot: devis.note_google_snapshot, nombre_avis_google_snapshot: devis.nombre_avis_google_snapshot,
+    signature_activee: true, signature_token: token, signature_date: devis.signature_date,
+    signature_nom_signataire: devis.signature_nom_signataire,
+    created_at: devis.date_creation, updated_at: devis.date_creation,
+  } as Devis
+
+  const clientForPdf = {
+    id: '', user_id: '', type_client: client.type_client,
+    nom: client.nom, nom_entreprise: client.nom_entreprise,
+    siret: client.siret, tva_intracommunautaire: client.tva_intracommunautaire,
+    email: client.email, telephone: client.telephone,
+    adresse: client.adresse, ville: client.ville, code_postal: client.code_postal,
+    notes: null, date_creation: devis.date_creation, dernier_contact: null,
+  } as Client
+
+  const parametresForPdf = {
+    id: '', user_id: '', nom_entreprise: entreprise.nom_entreprise,
+    siret: entreprise.siret ?? '', adresse_entreprise: entreprise.adresse_entreprise,
+    telephone_entreprise: entreprise.telephone_entreprise, email_entreprise: entreprise.email_entreprise,
+    logo_url: entreprise.logo_url, signature_url: entreprise.signature_url,
+    mentions_legales: entreprise.mentions_legales ?? '',
+    avis_google_url: entreprise.avis_google_url,
+    note_google: entreprise.note_google ?? 5, nombre_avis_google: entreprise.nombre_avis_google ?? 0,
+    afficher_avis_sur_devis: entreprise.afficher_avis_sur_devis, afficher_avis_sur_factures: true,
+    prochain_num_devis: 0, prochain_num_facture: 0,
+    created_at: '', updated_at: '',
+    tva_intracommunautaire: entreprise.tva_intracommunautaire, iban: null, bic: null,
+    forme_juridique: entreprise.forme_juridique, code_pays: 'FR',
+    assujetti_tva: entreprise.assujetti_tva, taux_tva: entreprise.taux_tva,
+  } as ParametresCompte
+
+  const lignesForPdf = lignes.map((l, i) => ({
+    id: String(i), user_id: '', document_type: 'devis' as const, document_id: devis.id,
+    ordre: l.ordre, description: l.description, detail: l.detail,
+    quantite: l.quantite, unite: l.unite, prix_unitaire: l.prix_unitaire,
+    montant_ligne: l.montant_ligne, is_upsell: false, created_at: '',
+  })) as LignePrestation[]
+
+  return { document: documentForPdf, type: 'devis' as const, lignes: lignesForPdf, client: clientForPdf, parametres: parametresForPdf }
+}
 
 export default function DevisSignaturePage() {
   const { token } = useParams<{ token: string }>()
   const [confirming, setConfirming] = useState<'signe' | 'refuse' | null>(null)
   const [nomSignataire, setNomSignataire] = useState('')
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [pdfError, setPdfError] = useState(false)
 
   const { data, isLoading, refetch } = useQuery<DevisSignaturePublic>({
     queryKey: ['devis-signature', token],
@@ -21,6 +77,31 @@ export default function DevisSignaturePage() {
     },
     enabled: !!token,
   })
+
+  // Génère le PDF côté navigateur (même moteur que le reste de l'app) dès que
+  // les données du devis sont disponibles, pour l'afficher et le télécharger.
+  useEffect(() => {
+    if (!data?.success || !token) return
+    let cancelled = false
+    let objectUrl: string | null = null
+    setPdfError(false)
+    ;(async () => {
+      try {
+        const input = buildPdfInput(data, token)
+        if (!input) throw new Error('Données incomplètes')
+        const bytes = await generateDocumentPdf(input)
+        if (cancelled) return
+        objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))
+        setPdfUrl(objectUrl)
+      } catch {
+        if (!cancelled) setPdfError(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [data, token])
 
   const repondre = useMutation({
     mutationFn: async (reponse: 'signe' | 'refuse') => {
@@ -70,92 +151,42 @@ export default function DevisSignaturePage() {
     )
   }
 
-  const { devis, client, entreprise, lignes = [] } = data
+  const { devis } = data
   const dejaRepondu = devis.statut !== 'en_attente'
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
 
-        <div className="text-center">
-          {entreprise?.logo_url && (
-            <img src={entreprise.logo_url} alt="" className="h-12 mx-auto mb-3 object-contain" />
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">{devis.titre || 'Devis'}</h1>
+            <p className="text-sm text-slate-400">{devis.numero}</p>
+          </div>
+          {pdfUrl && (
+            <a href={pdfUrl} download={`${devis.numero}.pdf`} className="btn-secondary btn-sm gap-1.5">
+              <Download size={13} /> Télécharger le PDF
+            </a>
           )}
         </div>
 
-        <div className="card space-y-6">
-          {/* ── En-tête : émetteur / client ──────────────────── */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-5">
-            <div>
-              <p className="font-bold text-slate-800">{entreprise?.nom_entreprise}</p>
-              {entreprise?.adresse_entreprise && <p className="text-xs text-slate-400">{entreprise.adresse_entreprise}</p>}
-              {entreprise?.siret && <p className="text-xs text-slate-400">SIRET : {entreprise.siret}</p>}
-              {entreprise?.telephone_entreprise && <p className="text-xs text-slate-400">{entreprise.telephone_entreprise}</p>}
-              {entreprise?.email_entreprise && <p className="text-xs text-slate-400">{entreprise.email_entreprise}</p>}
+        {/* ── Aperçu du document PDF ────────────────────────── */}
+        <div className="card p-2 sm:p-3">
+          {pdfUrl ? (
+            <iframe
+              src={pdfUrl}
+              title={`Devis ${devis.numero}`}
+              className="w-full h-[70vh] rounded-xl border border-slate-100"
+            />
+          ) : pdfError ? (
+            <div className="py-16 text-center">
+              <FileText size={36} className="mx-auto text-slate-200 mb-3" />
+              <p className="text-sm text-slate-400">Impossible d'afficher l'aperçu du devis.</p>
             </div>
-            <div className="sm:text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Destinataire</p>
-              <p className="font-semibold text-slate-700">
-                {client?.type_client === 'professionnel' && client.nom_entreprise ? client.nom_entreprise : client?.nom}
-              </p>
-              {client?.type_client === 'professionnel' && client.nom_entreprise && (
-                <p className="text-xs text-slate-400">{client.nom}</p>
-              )}
-              {client?.adresse && <p className="text-xs text-slate-400">{client.adresse}</p>}
-              {(client?.code_postal || client?.ville) && (
-                <p className="text-xs text-slate-400">{[client.code_postal, client.ville].filter(Boolean).join(' ')}</p>
-              )}
-              {client?.siret && <p className="text-xs text-slate-400">SIRET : {client.siret}</p>}
+          ) : (
+            <div className="py-16 flex items-center justify-center">
+              <Loader2 size={24} className="animate-spin text-brand-500" />
             </div>
-          </div>
-
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-slate-800">{devis.titre || 'Devis'}</h1>
-              <p className="text-sm text-slate-400">{devis.numero}</p>
-            </div>
-            <span className="badge badge-blue">{formatDate(devis.date_creation)}</span>
-          </div>
-
-          {lignes.length > 0 && (
-            <div className="rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                <span>Description</span>
-                <span className="text-right">Qté</span>
-                <span className="text-right">Prix unitaire</span>
-                <span className="text-right">Montant</span>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {lignes.map((l, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-center px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">{l.description}</p>
-                      {l.detail && <p className="text-xs text-slate-400">{l.detail}</p>}
-                    </div>
-                    <span className="text-sm text-slate-500 text-right">{l.quantite} {l.unite}</span>
-                    <span className="text-sm text-slate-500 text-right">{formatEuros(l.prix_unitaire)}</span>
-                    <span className="text-sm font-bold text-slate-700 text-right">{formatEuros(l.montant_ligne)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between px-4 py-3 bg-brand-50 rounded-2xl">
-            <span className="font-bold text-brand-800">Total</span>
-            <span className="text-xl font-extrabold text-brand-800">{formatEuros(devis.montant_total)}</span>
-          </div>
-
-          {devis.date_validite && (
-            <p className="text-xs text-slate-400 text-center">Devis valable jusqu'au {formatDate(devis.date_validite)}</p>
-          )}
-
-          {devis.notes_client && (
-            <p className="text-sm text-slate-500 border-t border-slate-100 pt-4 whitespace-pre-wrap">{devis.notes_client}</p>
-          )}
-
-          {entreprise?.mentions_legales && (
-            <p className="text-[10px] text-slate-300 border-t border-slate-100 pt-3 whitespace-pre-wrap">{entreprise.mentions_legales}</p>
           )}
         </div>
 
