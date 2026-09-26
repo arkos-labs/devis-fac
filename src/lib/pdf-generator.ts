@@ -39,6 +39,18 @@ function text(ctx: Ctx, str: string, x: number, size = 10, bold = false, color =
   ctx.page.drawText(sanitizeForPdf(str), { x, y: ctx.y, size, font: bold ? ctx.fontBold : ctx.font, color })
 }
 
+// Étoile 5 branches (path SVG, centrée sur 0,0, rayon ~10)
+const STAR_PATH = 'M0,-10 L2.35,-3.09 L9.51,-3.09 L3.7,1.18 L5.88,8.09 L0,3.82 L-5.88,8.09 L-3.7,1.18 L-9.51,-3.09 L-2.35,-3.09 Z'
+
+function drawStar(ctx: Ctx, x: number, y: number, size: number, filled: boolean) {
+  ctx.page.drawSvgPath(STAR_PATH, {
+    x, y,
+    scale: size / 10,
+    color: filled ? rgb(0.96, 0.62, 0.04) : rgb(0.88, 0.88, 0.9),
+    borderWidth: 0,
+  })
+}
+
 function line(ctx: Ctx, x1: number, x2: number, color = rgb(0.85, 0.85, 0.87)) {
   ctx.page.drawLine({ start: { x: x1, y: ctx.y }, end: { x: x2, y: ctx.y }, thickness: 0.75, color })
 }
@@ -216,16 +228,11 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
     const filledStars = Math.round(Number(docAvisNote) || 0)
     text(ctx, 'Avis Google', centerX - 40, 11, true, rgb(0.2, 0.2, 0.25))
     ctx.y -= 18
-    const starRadius = 5
-    const starGap = 14
+    const starSize = 6
+    const starGap = 15
     const starsStartX = centerX - 40
     for (let i = 0; i < 5; i++) {
-      ctx.page.drawCircle({
-        x: starsStartX + i * starGap + starRadius,
-        y: ctx.y,
-        size: starRadius,
-        color: i < filledStars ? rgb(0.96, 0.62, 0.04) : rgb(0.88, 0.88, 0.9),
-      })
+      drawStar(ctx, starsStartX + i * starGap + starSize, ctx.y, starSize, i < filledStars)
     }
     ctx.y -= 18
     text(ctx, `${docAvisNote}/5 sur ${docAvisCount} avis`, centerX - 40, 9, false, rgb(0.4, 0.4, 0.45))
