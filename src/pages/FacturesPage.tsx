@@ -149,6 +149,7 @@ export default function FacturesPage() {
   // ── Marquer payée ────────────────────────────────────────────
   const markPaid = useMutation({
     mutationFn: async ({ id, moyen, date }: { id: string; moyen: string; date: string }) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour modifier une facture')
       const { error } = await supabase.from('factures').update({
         statut: 'payee',
         date_paiement: date,
@@ -169,16 +170,19 @@ export default function FacturesPage() {
   // ── Marquer retard ───────────────────────────────────────────
   const markRetard = useMutation({
     mutationFn: async (id: string) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour modifier une facture')
       const { error } = await supabase.from('factures').update({ statut: 'retard' }).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['factures'] }),
+    onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
 
   // ── Créer un Avoir ───────────────────────────────────────────
   // Un Avoir = nouvelle facture avec montant négatif, liée à la facture annulée
   const creerAvoir = useMutation({
     mutationFn: async (facture: Facture) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour modifier une facture')
       // 1. Générer numéro
       const { data: numero, error: numErr } = await supabase.rpc('get_next_numero', {
         p_user_id: user!.id, p_type: 'facture'
@@ -445,25 +449,33 @@ export default function FacturesPage() {
 
                         {/* Marquer payée */}
                         {(f.statut === 'en_attente' || f.statut === 'retard') && !isAvoir && (
-                          <button onClick={() => { setPayingFacture(f); setPayDate(new Date().toISOString().slice(0,10)) }}
-                            className="btn-sm btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-0 gap-1">
+                          <button
+                            title={isSubscribed ? undefined : 'Abonnement requis'}
+                            disabled={!isSubscribed}
+                            onClick={() => { setPayingFacture(f); setPayDate(new Date().toISOString().slice(0,10)) }}
+                            className="btn-sm btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-0 gap-1 disabled:opacity-30">
                             <CheckCircle size={11} /> Payée
                           </button>
                         )}
 
                         {/* Marquer en retard */}
                         {f.statut === 'en_attente' && isOverdue && (
-                          <button onClick={() => markRetard.mutate(f.id)}
-                            className="btn-sm btn bg-red-50 text-red-600 hover:bg-red-100 border-0 text-[11px]">
+                          <button
+                            title={isSubscribed ? undefined : 'Abonnement requis'}
+                            disabled={!isSubscribed}
+                            onClick={() => markRetard.mutate(f.id)}
+                            className="btn-sm btn bg-red-50 text-red-600 hover:bg-red-100 border-0 text-[11px] disabled:opacity-30">
                             Retard
                           </button>
                         )}
 
                         {/* Créer un Avoir — remplace la suppression */}
                         {f.statut !== 'annulee' && !isAvoir && (
-                          <button title="Créer un Avoir (annulation légale)"
+                          <button
+                            title={isSubscribed ? 'Créer un Avoir (annulation légale)' : 'Abonnement requis'}
+                            disabled={!isSubscribed}
                             onClick={() => setAvoirTarget(f)}
-                            className="btn-sm btn bg-violet-50 text-violet-700 hover:bg-violet-100 border-0 gap-1">
+                            className="btn-sm btn bg-violet-50 text-violet-700 hover:bg-violet-100 border-0 gap-1 disabled:opacity-30">
                             <RotateCcw size={11} /> Rembourser
                           </button>
                         )}
