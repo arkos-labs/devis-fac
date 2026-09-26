@@ -8,3 +8,6 @@ ADD COLUMN tva_intracommunautaire TEXT;
 
 -- Index additionnel pour la recherche
 CREATE INDEX IF NOT EXISTS idx_clients_entreprise ON public.clients(user_id, nom_entreprise);
+
+ALTER TABLE public.devis
+ADD COLUMN IF NOT EXISTS titre TEXT;
