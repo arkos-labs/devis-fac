@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   BarChart2, BookUser, ScrollText, BadgeEuro,
-  SlidersHorizontal, LogOut, Zap, X
+  SlidersHorizontal, LogOut, Zap, X, CreditCard
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { to: '/devis',      icon: ScrollText,          label: 'Devis' },
   { to: '/factures',   icon: BadgeEuro,           label: 'Factures' },
   { to: '/parametres', icon: SlidersHorizontal,   label: 'Paramètres' },
+  { to: '/abonnement', icon: CreditCard,          label: 'Abonnement' },
 ]
 
 export default function Sidebar({ onClose }: SidebarProps) {

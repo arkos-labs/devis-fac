@@ -8,6 +8,7 @@ import ClientsPage from '@/pages/ClientsPage'
 import DevisPage from '@/pages/DevisPage'
 import FacturesPage from '@/pages/FacturesPage'
 import ParametresPage from '@/pages/ParametresPage'
+import AbonnementPage from '@/pages/AbonnementPage'
 import ClientDetailPage from '@/pages/ClientDetailPage'
 import LandingPage from '@/pages/LandingPage'
 
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/devis"       element={<DevisPage />} />
         <Route path="/factures"    element={<FacturesPage />} />
         <Route path="/parametres"  element={<ParametresPage />} />
+        <Route path="/abonnement"  element={<AbonnementPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
