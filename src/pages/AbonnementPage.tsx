@@ -18,8 +18,8 @@ const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : 
 type Interval = 'month' | 'year'
 
 const PLANS: Record<Interval, { label: string; price: string; sub: string; badge?: string }> = {
-  month: { label: 'Mensuel', price: '19,99 €', sub: '/ mois, sans engagement' },
-  year: { label: 'Annuel', price: '199,99 €', sub: '/ an', badge: '2 mois offerts' },
+  month: { label: 'Mensuel', price: '12,99 €', sub: '/ mois, sans engagement' },
+  year: { label: 'Annuel', price: '149,99 €', sub: '/ an' },
 }
 
 interface Subscription {
@@ -91,16 +91,16 @@ function CheckoutForm({ interval, onSuccess, onRetry }: { interval: Interval; on
 }
 
 function PlanCard({
-  plan, planKey, current, disabled, loading, onSelect, ctaLabel,
+  plan, current, disabled, loading, onSelect, ctaLabel,
 }: {
-  plan: typeof PLANS.month; planKey: Interval; current: boolean
+  plan: typeof PLANS.month; current: boolean
   disabled: boolean; loading: boolean; onSelect: () => void; ctaLabel: string
 }) {
   return (
     <div
       className={cn(
         'relative bg-white border rounded-2xl p-6 shadow-sm flex flex-col',
-        current ? 'border-emerald-300 ring-2 ring-emerald-100' : planKey === 'year' ? 'border-brand-300 ring-2 ring-brand-100' : 'border-slate-100'
+        current ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-100'
       )}
     >
       {current ? (
@@ -127,7 +127,7 @@ function PlanCard({
           'w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-colors disabled:opacity-50',
           current
             ? 'bg-emerald-50 text-emerald-700 cursor-default'
-            : planKey === 'year' ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-slate-900 text-white hover:bg-slate-800'
+            : 'bg-slate-900 text-white hover:bg-slate-800'
         )}
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -284,7 +284,6 @@ export default function AbonnementPage() {
               <PlanCard
                 key={key}
                 plan={plan}
-                planKey={key}
                 current={subscription?.plan_interval === key}
                 disabled={switching !== null}
                 loading={switching === key}
@@ -348,7 +347,6 @@ export default function AbonnementPage() {
             <PlanCard
               key={key}
               plan={plan}
-              planKey={key}
               current={false}
               disabled={initializing}
               loading={initializing && interval === key}
