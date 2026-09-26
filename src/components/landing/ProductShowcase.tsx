@@ -111,17 +111,6 @@ export default function ProductShowcase() {
                     </div>
                   ))}
                 </div>
-                <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm font-bold text-slate-700">Chiffre d'affaires</p>
-                    <span className="badge badge-green text-[10px]">+18% vs mois dernier</span>
-                  </div>
-                  <div className="h-24 flex items-end gap-2">
-                    {[40, 55, 35, 70, 60, 85, 65].map((h, i) => (
-                      <div key={i} className="flex-1 rounded-t-md bg-gradient-to-t from-brand-500 to-brand-300" style={{ height: `${h}%` }} />
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
 
