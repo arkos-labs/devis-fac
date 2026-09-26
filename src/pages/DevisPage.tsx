@@ -6,10 +6,11 @@ import { formatEuros, formatDate } from '@/lib/utils'
 import type { Devis, Client } from '@/types/database'
 import {
   Plus, Search, Zap, FileText,
-  ChevronDown, ArrowRight, Copy, Eye, Pencil, Download, Loader2, Archive
+  ArrowRight, Copy, Eye, Pencil, Download, Loader2, Archive
 } from 'lucide-react'
 import PrintModal from '@/components/pdf/PrintModal'
 import DevisModal, { type LigneForm, type DevisFormData } from '@/components/devis/DevisModal'
+import Select from '@/components/ui/Select'
 import toast from 'react-hot-toast'
 import { DEMO_DEVIS } from '@/lib/mockData'
 import { useDocumentDownload } from '@/lib/useDocumentDownload'
@@ -264,17 +265,18 @@ export default function DevisPage() {
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher un devis ou un client…" className="input pl-10" />
         </div>
-        <div className="relative">
-          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)}
-            className="input pr-8 appearance-none cursor-pointer">
-            <option value="tous">Tous les statuts</option>
-            <option value="en_attente">En attente</option>
-            <option value="accepte">Accepté</option>
-            <option value="refuse">Refusé</option>
-            <option value="expire">Expiré</option>
-          </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-        </div>
+        <Select
+          value={filterStatut}
+          onChange={setFilterStatut}
+          className="sm:w-56"
+          options={[
+            { value: 'tous', label: 'Tous les statuts' },
+            { value: 'en_attente', label: 'En attente' },
+            { value: 'accepte', label: 'Accepté' },
+            { value: 'refuse', label: 'Refusé' },
+            { value: 'expire', label: 'Expiré' },
+          ]}
+        />
       </div>
 
       {/* ── Table ─────────────────────────────────────────── */}

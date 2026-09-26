@@ -5,12 +5,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import { formatEuros, formatDate } from '@/lib/utils'
 import type { Facture, Client } from '@/types/database'
 import {
-  Plus, Search, ChevronDown, Receipt, CheckCircle,
+  Plus, Search, Receipt, CheckCircle,
   AlertCircle, Clock, X, Eye, RotateCcw, Info, Download, Loader2, Archive
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PrintModal from '@/components/pdf/PrintModal'
 import FactureModal, { type LigneForm, type FactureFormData } from '@/components/factures/FactureModal'
+import Select from '@/components/ui/Select'
 import { DEMO_FACTURES } from '@/lib/mockData'
 import { cn } from '@/lib/utils'
 import { useDocumentDownload } from '@/lib/useDocumentDownload'
@@ -323,17 +324,18 @@ export default function FacturesPage() {
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher une facture ou un client…" className="input pl-10" />
         </div>
-        <div className="relative">
-          <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)}
-            className="input pr-8 appearance-none cursor-pointer">
-            <option value="tous">Tous les statuts</option>
-            <option value="en_attente">En attente</option>
-            <option value="payee">Payées</option>
-            <option value="retard">En retard</option>
-            <option value="annulee">Annulées / Avoirs</option>
-          </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-        </div>
+        <Select
+          value={filterStatut}
+          onChange={setFilterStatut}
+          className="sm:w-56"
+          options={[
+            { value: 'tous', label: 'Tous les statuts' },
+            { value: 'en_attente', label: 'En attente' },
+            { value: 'payee', label: 'Payées' },
+            { value: 'retard', label: 'En retard' },
+            { value: 'annulee', label: 'Annulées / Avoirs' },
+          ]}
+        />
       </div>
 
       {/* ── Table ─────────────────────────────────────────── */}
@@ -498,13 +500,7 @@ export default function FacturesPage() {
               </div>
               <div className="form-group">
                 <label className="label">Moyen de paiement *</label>
-                <div className="relative">
-                  <select className="input appearance-none pr-8" value={payMoyen}
-                    onChange={e => setPayMoyen(e.target.value)}>
-                    {MOYENS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
+                <Select value={payMoyen} onChange={setPayMoyen} options={MOYENS} />
               </div>
             </div>
 
