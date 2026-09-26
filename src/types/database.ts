@@ -98,6 +98,8 @@ export interface DevisSignaturePublic {
     montant_ht: number; montant_total: number; notes_client: string | null
     signature_date: string | null
     signature_nom_signataire: string | null
+    note_google_snapshot: number | null
+    nombre_avis_google_snapshot: number | null
   }
   client?: {
     nom: string; nom_entreprise: string | null; type_client: TypeClient
@@ -106,13 +108,18 @@ export interface DevisSignaturePublic {
     siret: string | null; tva_intracommunautaire: string | null
   }
   entreprise?: {
-    nom_entreprise: string; logo_url: string | null
+    nom_entreprise: string; logo_url: string | null; signature_url: string | null
     siret: string | null; adresse_entreprise: string | null
     telephone_entreprise: string | null; email_entreprise: string | null
-    mentions_legales: string | null
+    mentions_legales: string | null; forme_juridique: string | null
+    tva_intracommunautaire: string | null
+    assujetti_tva: boolean; taux_tva: number
+    afficher_avis_sur_devis: boolean
+    note_google: number | null; nombre_avis_google: number | null
+    avis_google_url: string | null
   }
   lignes?: Array<{
-    description: string; detail: string | null
+    description: string; detail: string | null; ordre: number
     quantite: number; unite: string
     prix_unitaire: number; montant_ligne: number
   }>

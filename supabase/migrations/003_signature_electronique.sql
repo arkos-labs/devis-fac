@@ -73,7 +73,9 @@ BEGIN
       'montant_total', v_devis.montant_total,
       'notes_client', v_devis.notes_client,
       'signature_date', v_devis.signature_date,
-      'signature_nom_signataire', v_devis.signature_nom_signataire
+      'signature_nom_signataire', v_devis.signature_nom_signataire,
+      'note_google_snapshot', v_devis.note_google_snapshot,
+      'nombre_avis_google_snapshot', v_devis.nombre_avis_google_snapshot
     ),
     'client', (
       SELECT json_build_object(
@@ -86,10 +88,15 @@ BEGIN
     ),
     'entreprise', (
       SELECT json_build_object(
-        'nom_entreprise', p.nom_entreprise, 'logo_url', p.logo_url,
+        'nom_entreprise', p.nom_entreprise, 'logo_url', p.logo_url, 'signature_url', p.signature_url,
         'siret', p.siret, 'adresse_entreprise', p.adresse_entreprise,
         'telephone_entreprise', p.telephone_entreprise, 'email_entreprise', p.email_entreprise,
-        'mentions_legales', p.mentions_legales
+        'mentions_legales', p.mentions_legales, 'forme_juridique', p.forme_juridique,
+        'tva_intracommunautaire', p.tva_intracommunautaire,
+        'assujetti_tva', p.assujetti_tva, 'taux_tva', p.taux_tva,
+        'afficher_avis_sur_devis', p.afficher_avis_sur_devis,
+        'note_google', p.note_google, 'nombre_avis_google', p.nombre_avis_google,
+        'avis_google_url', p.avis_google_url
       )
       FROM public.parametres_compte p WHERE p.user_id = v_devis.user_id
     ),
@@ -97,6 +104,7 @@ BEGIN
       SELECT COALESCE(json_agg(json_build_object(
         'description', l.description,
         'detail', l.detail,
+        'ordre', l.ordre,
         'quantite', l.quantite,
         'unite', l.unite,
         'prix_unitaire', l.prix_unitaire,
