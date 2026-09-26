@@ -29,10 +29,18 @@ export default function DevisPage() {
     queryKey: ['devis', user?.id],
     queryFn: async () => {
       if (IS_DEMO) return DEMO_DEVIS
+      console.log('🔍 Fetching devis...')
       const { data, error } = await supabase
-        .from('devis').select('*')
-        .eq('user_id', user!.id).order('created_at', { ascending: false })
-      if (error) throw error
+        .from('devis')
+        .select('*')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('❌ Erreur query:', error)
+        throw error
+      }
+      console.log('✅ Devis trouvés:', data?.length ?? 0)
       return (data ?? []) as unknown as Devis[]
     },
     enabled: !!user,

@@ -49,6 +49,10 @@ export interface Client {
   notes: string | null
   date_creation: string
   dernier_contact: string | null
+  type_client?: string | null
+  nom_entreprise?: string | null
+  siret?: string | null
+  tva_intracommunautaire?: string | null
 }
 
 // ── devis ────────────────────────────────────────────────────
