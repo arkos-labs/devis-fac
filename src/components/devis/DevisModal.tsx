@@ -40,6 +40,7 @@ interface CatItem {
 interface PrestationRow {
   uid: number           // clé locale unique
   catalogueId?: string  // si vient du catalogue
+  libre: boolean        // saisie libre choisie explicitement
   description: string
   prix: number
   quantite: number
@@ -57,7 +58,7 @@ interface Props {
 
 let UID = 0
 const newRow = (partial?: Partial<PrestationRow>): PrestationRow => ({
-  uid: ++UID, catalogueId: undefined,
+  uid: ++UID, catalogueId: undefined, libre: false,
   description: '', prix: 0, quantite: 1, unite: 'forfait', options: [],
   ...partial,
 })
@@ -100,6 +101,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
             newRows.push({
               uid: ++UID,
               catalogueId: undefined, // Catalogue link not preserved in db directly for now
+              libre: true,
               description: ligne.description,
               prix: ligne.prix_unitaire,
               quantite: ligne.quantite,
@@ -191,6 +193,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
     if (!cat) return
     updateRow(uid, {
       catalogueId: catId,
+      libre: false,
       description: cat.nom,
       prix: cat.prix_defaut,
       unite: cat.unite,
@@ -284,6 +287,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
       const r = await res.json()
       const parsed = JSON.parse(r.choices[0].message.content)
       setRows(parsed.prestations.map((p: IAPrestationItem & { options?: Array<{ description: string; prix: number }> }) => newRow({
+        libre: true,
         description: p.description,
         quantite: p.quantite ?? 1,
         unite: p.unite ?? 'forfait',
@@ -473,14 +477,14 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
                       {rowIndex + 1}
                     </span>
                     {/* Sélecteur catalogue OU saisie libre */}
-                    {prestationsCatalogue.length > 0 && !row.catalogueId ? (
+                    {prestationsCatalogue.length > 0 && !row.catalogueId && !row.libre ? (
                       <div className="flex-1 relative">
                         <select
                           className="input appearance-none pr-8 text-sm"
                           value=""
                           onChange={e => {
                             if (e.target.value === '__libre') {
-                              updateRow(row.uid, { catalogueId: undefined, description: '' })
+                              updateRow(row.uid, { catalogueId: undefined, libre: true, description: '' })
                             } else {
                               selectCatalogue(row.uid, e.target.value)
                             }
