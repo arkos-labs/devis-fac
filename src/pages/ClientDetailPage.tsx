@@ -15,6 +15,7 @@ import {
 import toast from 'react-hot-toast'
 import DevisModal, { type LigneForm as DevisLigneForm, type DevisFormData } from '@/components/devis/DevisModal'
 import FactureModal, { type LigneForm as FactureLigneForm, type FactureFormData } from '@/components/factures/FactureModal'
+import { useDocumentDownload } from '@/lib/useDocumentDownload'
 
 // ── Helpers ───────────────────────────────────────────────────
 function badgeDevis(statut: string) {
@@ -189,6 +190,7 @@ export default function ClientDetailPage() {
   const { user } = useAuth()
   const { isActive: isSubscribed } = useSubscription()
   const qc = useQueryClient()
+  const { sendByEmail } = useDocumentDownload()
   const [showPlan, setShowPlan] = useState(false)
   const [showDevisModal, setShowDevisModal] = useState(false)
   const [showFactureModal, setShowFactureModal] = useState(false)
@@ -229,7 +231,7 @@ export default function ClientDetailPage() {
   })
 
   const saveDevis = useMutation({
-    mutationFn: async ({ form, lignes }: { form: DevisFormData; lignes: DevisLigneForm[] }) => {
+    mutationFn: async ({ form, lignes }: { form: DevisFormData; lignes: DevisLigneForm[]; send?: boolean }) => {
       if (!isSubscribed) throw new Error('Abonnez-vous pour créer un devis')
       const { data: numero, error: numError } = await supabase.rpc('get_next_numero', {
         p_user_id: user!.id, p_type: 'devis'
@@ -269,19 +271,25 @@ export default function ClientDetailPage() {
         }))
       )
       if (lignesError) throw lignesError
+
+      const { data: fullDevis } = await supabase.from('devis').select('*').eq('id', newDevis.id).single()
+      return fullDevis as unknown as Devis
     },
-    onSuccess: () => {
+    onSuccess: async (fullDevis, variables) => {
       qc.invalidateQueries({ queryKey: ['client-devis', id] })
       qc.invalidateQueries({ queryKey: ['devis'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Devis créé !')
       setShowDevisModal(false)
+      if (variables.send && fullDevis && client) {
+        await sendByEmail(fullDevis, 'devis', client.email || '')
+      }
     },
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
 
   const saveFacture = useMutation({
-    mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: FactureLigneForm[] }) => {
+    mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: FactureLigneForm[]; send?: boolean }) => {
       if (!isSubscribed) throw new Error('Abonnez-vous pour créer une facture')
       const { data: numero, error: numError } = await supabase.rpc('get_next_numero', {
         p_user_id: user!.id, p_type: 'facture'
@@ -325,13 +333,17 @@ export default function ClientDetailPage() {
         }))
       )
       if (lignesError) throw lignesError
+      return newFacture as unknown as Facture
     },
-    onSuccess: () => {
+    onSuccess: async (newFacture, variables) => {
       qc.invalidateQueries({ queryKey: ['client-factures', id] })
       qc.invalidateQueries({ queryKey: ['factures'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Facture créée !')
       setShowFactureModal(false)
+      if (variables.send && newFacture && client) {
+        await sendByEmail(newFacture, 'facture', client.email || '')
+      }
     },
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
   })
@@ -645,7 +657,7 @@ export default function ClientDetailPage() {
       {showDevisModal && (
         <DevisModal
           initialClientId={client.id}
-          onSave={(form, lignes) => saveDevis.mutate({ form, lignes })}
+          onSave={(form, lignes, send) => saveDevis.mutate({ form, lignes, send })}
           onClose={() => setShowDevisModal(false)}
           isSaving={saveDevis.isPending}
         />
@@ -655,7 +667,7 @@ export default function ClientDetailPage() {
       {showFactureModal && (
         <FactureModal
           initialClientId={client.id}
-          onSave={(form, lignes) => saveFacture.mutate({ form, lignes })}
+          onSave={(form, lignes, send) => saveFacture.mutate({ form, lignes, send })}
           onClose={() => setShowFactureModal(false)}
           isSaving={saveFacture.isPending}
         />

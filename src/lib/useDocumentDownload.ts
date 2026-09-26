@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { formatEuros } from '@/lib/utils'
 import type { Devis, Facture, Client, ParametresCompte, LignePrestation } from '@/types/database'
 import { generateDownloadableDocument, downloadBlob } from '@/lib/facturx'
 import toast from 'react-hot-toast'
@@ -47,5 +48,30 @@ export function useDocumentDownload() {
     }
   }
 
-  return { download, downloadingId }
+  // Télécharge le PDF/Factur-X puis ouvre un brouillon email — un lien
+  // mailto: ne peut pas joindre de fichier automatiquement (limitation des
+  // navigateurs), le fichier téléchargé doit être glissé dans l'email par
+  // l'utilisateur.
+  const sendByEmail = async (document: Devis | Facture, type: 'devis' | 'facture', clientEmail: string) => {
+    if (!clientEmail) return toast.error("Ce client n'a pas d'email renseigné")
+    await download(document, type)
+
+    const titre = document.titre || 'prestation'
+    const total = formatEuros(document.montant_total)
+    if (type === 'devis') {
+      const d = document as Devis
+      const valDate = d.date_validite ? new Date(d.date_validite).toLocaleDateString('fr-FR') : '—'
+      const subject = encodeURIComponent(`Devis — ${titre}`)
+      const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${titre}.\n\nMontant total : ${total}\nValidité : jusqu'au ${valDate}\n\n(Le fichier téléchargé est à joindre à cet email)\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
+      window.open(`mailto:${clientEmail}?subject=${subject}&body=${body}`)
+    } else {
+      const f = document as Facture
+      const echDate = f.date_echeance ? new Date(f.date_echeance).toLocaleDateString('fr-FR') : '—'
+      const subject = encodeURIComponent(`Facture — ${titre}`)
+      const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre facture pour : ${titre}.\n\nMontant total : ${total}\nÉchéance : ${echDate}\n\n(Le fichier téléchargé est à joindre à cet email)\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
+      window.open(`mailto:${clientEmail}?subject=${subject}&body=${body}`)
+    }
+  }
+
+  return { download, downloadingId, sendByEmail }
 }
