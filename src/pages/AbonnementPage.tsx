@@ -29,10 +29,12 @@ interface Subscription {
   plan_interval: Interval | null
 }
 
-function CheckoutForm({ interval, onSuccess }: { interval: Interval; onSuccess: () => void }) {
+function CheckoutForm({ interval, onSuccess, onRetry }: { interval: Interval; onSuccess: () => void; onRetry: () => void }) {
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
+  const [elementReady, setElementReady] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,12 +58,29 @@ function CheckoutForm({ interval, onSuccess }: { interval: Interval; onSuccess: 
     setSubmitting(false)
   }
 
+  if (loadFailed) {
+    return (
+      <div className="text-sm text-slate-600 space-y-3">
+        <p>Le formulaire de paiement n'a pas pu se charger. Réessaie.</p>
+        <button
+          onClick={onRetry}
+          className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white font-semibold py-3 rounded-xl hover:bg-slate-800 transition-colors"
+        >
+          Réessayer
+        </button>
+      </div>
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <PaymentElement />
+      <PaymentElement
+        onReady={() => setElementReady(true)}
+        onLoadError={() => setLoadFailed(true)}
+      />
       <button
         type="submit"
-        disabled={!stripe || submitting}
+        disabled={!stripe || !elementReady || submitting}
         className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white font-semibold py-3 rounded-xl hover:bg-slate-800 transition-colors disabled:opacity-50"
       >
         {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
@@ -319,8 +338,8 @@ export default function AbonnementPage() {
           </button>
           <p className="font-bold text-slate-900 mb-1">Formule {PLANS[interval].label}</p>
           <p className="text-sm text-slate-500 mb-6">{PLANS[interval].price} {PLANS[interval].sub}</p>
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm interval={interval} onSuccess={loadSubscription} />
+          <Elements key={clientSecret} stripe={stripePromise} options={{ clientSecret }}>
+            <CheckoutForm interval={interval} onSuccess={loadSubscription} onRetry={() => startCheckout(interval)} />
           </Elements>
         </div>
       ) : (

@@ -68,7 +68,7 @@ function PlanModal({ client, onClose }: PlanModalProps) {
   const [date, setDate]       = useState(today)
   const [heure, setHeure]     = useState('09:00')
   const [duree, setDuree]     = useState('2')
-  const [desc, setDesc]       = useState('Nettoyage')
+  const [desc, setDesc]       = useState('Rendez-vous')
   const [tarif, setTarif]     = useState('')
   const [adresse, setAdresse] = useState(
     [client.adresse, client.ville, client.code_postal].filter(Boolean).join(', ')
@@ -125,7 +125,7 @@ function PlanModal({ client, onClose }: PlanModalProps) {
           <div className="form-group">
             <label className="label">Description de la prestation</label>
             <input className="input" value={desc} onChange={e => setDesc(e.target.value)}
-              placeholder="Nettoyage canapé, voiture…" />
+              placeholder="Consultation, livraison…" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

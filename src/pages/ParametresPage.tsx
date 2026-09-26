@@ -465,7 +465,7 @@ export default function ParametresPage() {
           </div>
           <div className="form-group">
             <label className="label">Email</label>
-            <input type="email" className="input" placeholder="contact@cleanpro.fr" {...f('email_entreprise')} />
+            <input type="email" className="input" placeholder="contact@exemple.fr" {...f('email_entreprise')} />
           </div>
           <div className="form-group">
             <label className="label">Téléphone</label>

@@ -373,7 +373,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
               <div className="flex gap-2">
                 <input value={promptIA} onChange={e => setPromptIA(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && genererIA()}
-                  placeholder="Ex : canapé 3 places + matelas Paris…"
+                  placeholder="Ex : Refonte site web + hébergement 1 an…"
                   className="input flex-1 text-sm" />
                 <button onClick={genererIA} disabled={iaLoading}
                   className="btn-primary btn-sm gap-1.5 whitespace-nowrap">
@@ -472,7 +472,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
             <label className="label">Titre du devis *</label>
             <input
               className="input font-semibold text-base"
-              placeholder="Ex : Nettoyage de Diogène 45m² — Appartement Toulouse"
+              placeholder="Ex : Refonte du site vitrine — Dupont SARL"
               value={form.titre}
               onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
             />
@@ -516,7 +516,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
                       />
                     ) : (
                       <input
-                        placeholder="Prestation (ex : Canapé 3 places)"
+                        placeholder="Prestation (ex : Consultation initiale)"
                         value={row.description}
                         onChange={e => updateRow(row.uid, { description: e.target.value })}
                         className="input flex-1 text-sm font-medium"

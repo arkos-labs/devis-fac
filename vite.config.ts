@@ -12,12 +12,18 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        cleanupOutdatedCaches: true,
+        // Ne jamais précacher/servir la page HTML depuis le cache : elle doit
+        // toujours être récupérée fraîche pour référencer les derniers bundles
+        // JS après un déploiement (sinon l'app peut rester bloquée sur une
+        // ancienne version tant que l'onglet n'est pas rechargé manuellement).
+        globPatterns: ['**/*.{js,css,ico,png,svg}'],
+        navigateFallback: null,
       },
       manifest: {
-        name: 'CleanPro CRM',
-        short_name: 'CleanPro',
-        description: 'CRM & Facturation pour nettoyage spécialisé',
+        name: 'CRM Pro',
+        short_name: 'CRM Pro',
+        description: 'CRM & facturation pour indépendants et petites entreprises',
         theme_color: '#1e40af',
         background_color: '#f8fafc',
         display: 'standalone',

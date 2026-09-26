@@ -8,7 +8,7 @@ const IS_DEMO = import.meta.env.VITE_DEMO_MODE === 'true'
 // Faux utilisateur pour le mode démo
 const DEMO_FAKE_USER = {
   id: DEMO_USER_ID,
-  email: 'demo@cleanpro.fr',
+  email: 'demo@exemple.fr',
   role: 'authenticated',
   app_metadata: {},
   user_metadata: { nom_entreprise: 'Mon Entreprise' },
