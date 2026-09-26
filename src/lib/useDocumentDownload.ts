@@ -89,8 +89,16 @@ export function useDocumentDownload() {
       const file = new File([blob], filename, { type: blob.type })
 
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: subject, text: `${body}\n\n(à : ${clientEmail})` })
-        toast.success('Choisis ton application mail pour envoyer — le fichier est déjà joint.')
+        // Le partage natif n'a pas de champ "destinataire" (limitation de
+        // l'API) — on copie l'adresse dans le presse-papier et on prévient
+        // AVANT d'ouvrir le sélecteur d'app, pour que le message soit vu
+        // avant que l'appli mail ne prenne l'écran.
+        let copied = false
+        try { await navigator.clipboard.writeText(clientEmail); copied = true } catch { /* presse-papier indisponible */ }
+        if (copied) {
+          toast.success(`Adresse copiée : collez-la (Ctrl+V) dans le champ "À" de l'email — ${clientEmail}`, { duration: 8000 })
+        }
+        await navigator.share({ files: [file], title: subject, text: body })
         return
       }
 
