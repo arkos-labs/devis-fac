@@ -2,7 +2,7 @@
 // TYPES TypeScript — miroir du schéma Supabase
 // ============================================================
 
-export type StatutDevis = 'en_attente' | 'accepte' | 'refuse' | 'expire'
+export type StatutDevis = 'en_attente' | 'accepte' | 'refuse' | 'expire' | 'facture' | 'signe'
 export type StatutFacture = 'en_attente' | 'payee' | 'retard' | 'annulee'
 export type MoyenPaiement = 'virement' | 'cheque' | 'especes' | 'carte' | 'autre'
 export type DocumentType = 'devis' | 'facture'
@@ -76,11 +76,34 @@ export interface Devis {
   prompt_ia: string | null
   note_google_snapshot: number | null
   nombre_avis_google_snapshot: number | null
+  signature_activee?: boolean
+  signature_token?: string
+  signature_date?: string | null
   created_at: string
   updated_at: string
   // Relations jointes
   clients?: Client
   lignes_prestation?: LignePrestation[]
+}
+
+// ── réponse signature publique (RPC get_devis_signature) ─────
+export interface DevisSignaturePublic {
+  success: boolean
+  error?: string
+  statut?: string
+  devis?: {
+    id: string; numero: string; titre: string | null; statut: StatutDevis
+    date_creation: string; date_validite: string | null
+    montant_total: number; notes_client: string | null
+    signature_date: string | null
+  }
+  client?: { nom: string; nom_entreprise: string | null }
+  entreprise?: { nom_entreprise: string; logo_url: string | null }
+  lignes?: Array<{
+    description: string; detail: string | null
+    quantite: number; unite: string
+    prix_unitaire: number; montant_ligne: number; is_upsell: boolean
+  }>
 }
 
 // ── factures ─────────────────────────────────────────────────
@@ -206,6 +229,8 @@ export type Database = {
       get_dashboard_stats:          { Args: { p_user_id: string }; Returns: DashboardStats }
       get_clients_a_relancer:       { Args: { p_user_id: string }; Returns: ClientARelancer[] }
       envoyer_relance:              { Args: { p_user_id: string; p_client_id: string }; Returns: Record<string, any> }
+      get_devis_signature:          { Args: { p_token: string }; Returns: DevisSignaturePublic }
+      repondre_devis_signature:     { Args: { p_token: string; p_reponse: 'signe' | 'refuse' }; Returns: { success: boolean; error?: string; statut?: string } }
     }
   }
 }
