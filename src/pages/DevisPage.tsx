@@ -30,7 +30,7 @@ export default function DevisPage() {
     queryFn: async () => {
       if (IS_DEMO) return DEMO_DEVIS
       const { data, error } = await supabase
-        .from('devis').select('*, clients(nom, email, telephone, adresse, ville, code_postal), lignes_prestation(*)')
+        .from('devis').select('*')
         .eq('user_id', user!.id).order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as Devis[]
