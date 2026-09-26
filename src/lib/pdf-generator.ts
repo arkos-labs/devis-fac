@@ -94,8 +94,8 @@ export async function generateDocumentPdf({ document, type, lignes, client, para
   // ── En-tête ──────────────────────────────────────────────
   const logo = await embedImage(doc, parametres.logo_url)
   if (logo) {
-    const maxH = 90
-    const maxW = 220
+    const maxH = 160
+    const maxW = 340
     const scale = Math.min(maxH / logo.height, maxW / logo.width)
     const w = logo.width * scale
     const h = logo.height * scale
