@@ -141,38 +141,31 @@ export default function SignupPage() {
   // State
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<'auth' | 'company'>('auth')
 
   const doSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
-    if (step === 'auth') {
-      if (password !== confirmPassword) {
-        setError('Les mots de passe ne correspondent pas.')
-        return
-      }
-      if (password.length < 6) {
-        setError('Le mot de passe doit contenir au moins 6 caractères.')
-        return
-      }
-      setStep('company')
+    if (password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas.')
       return
     }
-
-    if (step === 'company') {
-      if (!nomEntreprise.trim()) {
-        setError('Veuillez entrer le nom de votre entreprise.')
-        return
-      }
-      if (!siret.trim()) {
-        setError('Veuillez entrer votre SIRET.')
-        return
-      }
-      if (!validateSIRET(siret)) {
-        setError('Le SIRET est invalide (doit être 14 chiffres valides).')
-        return
-      }
+    if (password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères.')
+      return
+    }
+    if (!nomEntreprise.trim()) {
+      setError('Veuillez entrer le nom de votre entreprise.')
+      return
+    }
+    if (!siret.trim()) {
+      setError('Veuillez entrer votre SIRET.')
+      return
+    }
+    if (!validateSIRET(siret)) {
+      setError('Le SIRET est invalide (doit être 14 chiffres valides).')
+      return
+    }
 
       setLoading(true)
       try {
@@ -229,7 +222,6 @@ export default function SignupPage() {
         } else {
           // Confirmation d'email requise
           toast.success('Compte créé ! Vérifiez votre email pour confirmer votre inscription.')
-          setStep('auth')
           setError(null)
           navigate('/login')
         }
@@ -238,7 +230,6 @@ export default function SignupPage() {
       } finally {
         setLoading(false)
       }
-    }
   }
 
   if (!isSupabaseConfigured) {
@@ -302,30 +293,28 @@ export default function SignupPage() {
           <div className="animate-slide-up">
             <div className="mb-7">
               <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                {step === 'auth' ? 'Créer un compte' : 'Infos de votre entreprise'}
+                Créer un compte
               </h2>
               <p className="text-slate-400 text-sm mt-1.5 font-medium">
-                {step === 'auth'
-                  ? 'Étape 1/2 : Identifiants de connexion'
-                  : 'Étape 2/2 : Informations professionnelles'}
+                Renseignez vos identifiants et les infos de votre entreprise
               </p>
             </div>
 
             <div className="card" style={{ boxShadow: '0 4px 32px rgba(37,99,235,0.08), 0 1px 3px rgba(0,0,0,0.06)' }}>
               <form onSubmit={doSignup} className="space-y-4">
-                {/* ── Étape 1: Auth ──────────────────────────────── */}
-                {step === 'auth' && (
-                  <>
-                    <div className="form-group">
-                      <label htmlFor="email" className="label">Adresse email *</label>
-                      <input
-                        id="email" type="email" autoComplete="email" required
-                        value={email} onChange={e => setEmail(e.target.value)}
-                        placeholder="vous@exemple.fr"
-                        className={error ? 'input-error' : 'input'}
-                      />
-                    </div>
+                {/* ── Identifiants ──────────────────────────────── */}
+                <div className="space-y-4">
+                  <div className="form-group">
+                    <label htmlFor="email" className="label">Adresse email *</label>
+                    <input
+                      id="email" type="email" autoComplete="email" required
+                      value={email} onChange={e => setEmail(e.target.value)}
+                      placeholder="vous@exemple.fr"
+                      className={error ? 'input-error' : 'input'}
+                    />
+                  </div>
 
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="form-group">
                       <label htmlFor="password" className="label">Mot de passe *</label>
                       <div className="relative">
@@ -345,11 +334,10 @@ export default function SignupPage() {
                           {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">Minimum 6 caractères</p>
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="confirm" className="label">Confirmer le mot de passe *</label>
+                      <label htmlFor="confirm" className="label">Confirmer *</label>
                       <div className="relative">
                         <input
                           id="confirm"
@@ -368,12 +356,14 @@ export default function SignupPage() {
                         </button>
                       </div>
                     </div>
-                  </>
-                )}
+                  </div>
+                </div>
 
-                {/* ── Étape 2: Infos Entreprise ──────────────────– */}
-                {step === 'company' && (
-                  <>
+                <hr className="border-slate-100 my-2" />
+
+                {/* ── Infos Entreprise ──────────────────– */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="form-group">
                       <label htmlFor="nom" className="label">Nom de l'entreprise *</label>
                       <input
@@ -389,44 +379,43 @@ export default function SignupPage() {
                       <input
                         id="siret" type="text" required
                         value={siret} onChange={e => setSiret(e.target.value)}
-                        placeholder="99 039 012 200 028"
+                        placeholder="99039012200028"
                         className={error ? 'input-error' : 'input'}
                       />
-                      <p className="text-xs text-slate-500 mt-1">14 chiffres, espaces ignorés</p>
                     </div>
+                  </div>
 
+                  <div className="form-group">
+                    <label htmlFor="adresse" className="label">Adresse</label>
+                    <input
+                      id="adresse" type="text"
+                      value={adresse} onChange={e => setAdresse(e.target.value)}
+                      placeholder="12 rue de la Paix, Paris"
+                      className="input"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="form-group">
-                      <label htmlFor="adresse" className="label">Adresse</label>
+                      <label htmlFor="email-ent" className="label">Email Pro</label>
                       <input
-                        id="adresse" type="text"
-                        value={adresse} onChange={e => setAdresse(e.target.value)}
-                        placeholder="12 rue de la Paix, Paris"
+                        id="email-ent" type="email"
+                        value={emailEntreprise} onChange={e => setEmailEntreprise(e.target.value)}
+                        placeholder="contact@entreprise.fr"
                         className="input"
                       />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="form-group">
-                        <label htmlFor="email-ent" className="label">Email</label>
-                        <input
-                          id="email-ent" type="email"
-                          value={emailEntreprise} onChange={e => setEmailEntreprise(e.target.value)}
-                          placeholder="contact@entreprise.fr"
-                          className="input"
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="tel-ent" className="label">Téléphone</label>
-                        <input
-                          id="tel-ent" type="tel"
-                          value={telephoneEntreprise} onChange={e => setTelephoneEntreprise(e.target.value)}
-                          placeholder="06 12 34 56 78"
-                          className="input"
-                        />
-                      </div>
+                    <div className="form-group">
+                      <label htmlFor="tel-ent" className="label">Téléphone Pro</label>
+                      <input
+                        id="tel-ent" type="tel"
+                        value={telephoneEntreprise} onChange={e => setTelephoneEntreprise(e.target.value)}
+                        placeholder="06 12 34 56 78"
+                        className="input"
+                      />
                     </div>
-                  </>
-                )}
+                  </div>
+                </div>
 
                 {error && (
                   <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 animate-slide-down">
@@ -436,24 +425,15 @@ export default function SignupPage() {
                 )}
 
                 <div className="flex gap-3 pt-2">
-                  {step === 'company' && (
-                    <button
-                      type="button" onClick={() => { setStep('auth'); setError(null) }}
-                      disabled={loading}
-                      className="btn-secondary flex-1"
-                    >
-                      Retour
-                    </button>
-                  )}
                   <button
                     type="submit" disabled={loading}
                     className="btn-primary flex-1"
                   >
                     {loading
                       ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        {step === 'auth' ? 'Vérification…' : 'Création du compte…'}
+                        Création du compte…
                         </>
-                      : step === 'auth' ? 'Continuer' : 'Créer le compte'
+                      : 'Créer le compte'
                     }
                   </button>
                 </div>
