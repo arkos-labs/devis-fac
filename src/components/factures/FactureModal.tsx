@@ -53,7 +53,7 @@ interface PrestationRow {
 interface Props {
   editingFacture?: Facture | null
   initialClientId?: string
-  onSave: (form: FactureFormData, lignes: LigneForm[]) => void
+  onSave: (form: FactureFormData, lignes: LigneForm[], sendByEmail?: boolean) => void
   onClose: () => void
   isSaving: boolean
 }
@@ -262,21 +262,12 @@ export default function FactureModal({ editingFacture, initialClientId, onSave, 
 
   const selectedClientEmail = clients.find(c => c.id === form.client_id)?.email || ''
 
-  const sendEmail = () => {
-    const total = totalAvecOptions
-    const subject = encodeURIComponent(`Facture — ${form.titre || 'Prestation'}`)
-    const echDate = form.date_echeance ? new Date(form.date_echeance).toLocaleDateString('fr-FR') : '—'
-    const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint votre facture pour : ${form.titre || 'prestation'}.\n\nMontant total : ${formatEuros(total)}\nÉchéance : ${echDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`)
-    window.open(`mailto:${selectedClientEmail}?subject=${subject}&body=${body}`)
-  }
-
   const handleSave = () => {
     if (!isSubscribed) return toast.error(`Abonnez-vous pour ${editingFacture ? 'modifier' : 'créer'} une facture`)
     if (!form.client_id) return toast.error('Sélectionnez un client')
     if (!form.titre.trim()) return toast.error('Ajoutez un titre à la facture')
     if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
-    if (!editingFacture && selectedClientEmail) sendEmail()
-    onSave(form, toLignes())
+    onSave(form, toLignes(), !editingFacture && !!selectedClientEmail)
   }
 
   return (
