@@ -94,11 +94,21 @@ export interface DevisSignaturePublic {
   devis?: {
     id: string; numero: string; titre: string | null; statut: StatutDevis
     date_creation: string; date_validite: string | null
-    montant_total: number; notes_client: string | null
+    montant_ht: number; montant_total: number; notes_client: string | null
     signature_date: string | null
   }
-  client?: { nom: string; nom_entreprise: string | null }
-  entreprise?: { nom_entreprise: string; logo_url: string | null }
+  client?: {
+    nom: string; nom_entreprise: string | null; type_client: TypeClient
+    email: string | null; telephone: string | null
+    adresse: string | null; ville: string | null; code_postal: string | null
+    siret: string | null; tva_intracommunautaire: string | null
+  }
+  entreprise?: {
+    nom_entreprise: string; logo_url: string | null
+    siret: string | null; adresse_entreprise: string | null
+    telephone_entreprise: string | null; email_entreprise: string | null
+    mentions_legales: string | null
+  }
   lignes?: Array<{
     description: string; detail: string | null
     quantite: number; unite: string

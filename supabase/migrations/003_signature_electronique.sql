@@ -68,16 +68,27 @@ BEGIN
       'statut', v_devis.statut,
       'date_creation', v_devis.date_creation,
       'date_validite', v_devis.date_validite,
+      'montant_ht', v_devis.montant_ht,
       'montant_total', v_devis.montant_total,
       'notes_client', v_devis.notes_client,
       'signature_date', v_devis.signature_date
     ),
     'client', (
-      SELECT json_build_object('nom', c.nom, 'nom_entreprise', c.nom_entreprise)
+      SELECT json_build_object(
+        'nom', c.nom, 'nom_entreprise', c.nom_entreprise, 'type_client', c.type_client,
+        'email', c.email, 'telephone', c.telephone,
+        'adresse', c.adresse, 'ville', c.ville, 'code_postal', c.code_postal,
+        'siret', c.siret, 'tva_intracommunautaire', c.tva_intracommunautaire
+      )
       FROM public.clients c WHERE c.id = v_devis.client_id
     ),
     'entreprise', (
-      SELECT json_build_object('nom_entreprise', p.nom_entreprise, 'logo_url', p.logo_url)
+      SELECT json_build_object(
+        'nom_entreprise', p.nom_entreprise, 'logo_url', p.logo_url,
+        'siret', p.siret, 'adresse_entreprise', p.adresse_entreprise,
+        'telephone_entreprise', p.telephone_entreprise, 'email_entreprise', p.email_entreprise,
+        'mentions_legales', p.mentions_legales
+      )
       FROM public.parametres_compte p WHERE p.user_id = v_devis.user_id
     ),
     'lignes', (

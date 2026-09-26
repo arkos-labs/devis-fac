@@ -79,29 +79,63 @@ export default function DevisSignaturePage() {
           {entreprise?.logo_url && (
             <img src={entreprise.logo_url} alt="" className="h-12 mx-auto mb-3 object-contain" />
           )}
-          <p className="text-sm font-semibold text-slate-500">{entreprise?.nom_entreprise}</p>
         </div>
 
-        <div className="card space-y-5">
+        <div className="card space-y-6">
+          {/* ── En-tête : émetteur / client ──────────────────── */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-5">
+            <div>
+              <p className="font-bold text-slate-800">{entreprise?.nom_entreprise}</p>
+              {entreprise?.adresse_entreprise && <p className="text-xs text-slate-400">{entreprise.adresse_entreprise}</p>}
+              {entreprise?.siret && <p className="text-xs text-slate-400">SIRET : {entreprise.siret}</p>}
+              {entreprise?.telephone_entreprise && <p className="text-xs text-slate-400">{entreprise.telephone_entreprise}</p>}
+              {entreprise?.email_entreprise && <p className="text-xs text-slate-400">{entreprise.email_entreprise}</p>}
+            </div>
+            <div className="sm:text-right">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Destinataire</p>
+              <p className="font-semibold text-slate-700">
+                {client?.type_client === 'professionnel' && client.nom_entreprise ? client.nom_entreprise : client?.nom}
+              </p>
+              {client?.type_client === 'professionnel' && client.nom_entreprise && (
+                <p className="text-xs text-slate-400">{client.nom}</p>
+              )}
+              {client?.adresse && <p className="text-xs text-slate-400">{client.adresse}</p>}
+              {(client?.code_postal || client?.ville) && (
+                <p className="text-xs text-slate-400">{[client.code_postal, client.ville].filter(Boolean).join(' ')}</p>
+              )}
+              {client?.siret && <p className="text-xs text-slate-400">SIRET : {client.siret}</p>}
+            </div>
+          </div>
+
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-bold text-slate-800">{devis.titre || 'Devis'}</h1>
-              <p className="text-sm text-slate-400">{devis.numero} — {client?.nom}</p>
+              <p className="text-sm text-slate-400">{devis.numero}</p>
             </div>
             <span className="badge badge-blue">{formatDate(devis.date_creation)}</span>
           </div>
 
           {lignes.length > 0 && (
-            <div className="rounded-2xl border border-slate-200 divide-y divide-slate-100">
-              {lignes.map((l, i) => (
-                <div key={i} className="flex items-center justify-between px-4 py-3">
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{l.description}</p>
-                    {l.detail && <p className="text-xs text-slate-400">{l.detail}</p>}
+            <div className="rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2 bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                <span>Description</span>
+                <span className="text-right">Qté</span>
+                <span className="text-right">Prix unitaire</span>
+                <span className="text-right">Montant</span>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {lignes.map((l, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-center px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">{l.description}</p>
+                      {l.detail && <p className="text-xs text-slate-400">{l.detail}</p>}
+                    </div>
+                    <span className="text-sm text-slate-500 text-right">{l.quantite} {l.unite}</span>
+                    <span className="text-sm text-slate-500 text-right">{formatEuros(l.prix_unitaire)}</span>
+                    <span className="text-sm font-bold text-slate-700 text-right">{formatEuros(l.montant_ligne)}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-600">{formatEuros(l.montant_ligne)}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
@@ -116,6 +150,10 @@ export default function DevisSignaturePage() {
 
           {devis.notes_client && (
             <p className="text-sm text-slate-500 border-t border-slate-100 pt-4 whitespace-pre-wrap">{devis.notes_client}</p>
+          )}
+
+          {entreprise?.mentions_legales && (
+            <p className="text-[10px] text-slate-300 border-t border-slate-100 pt-3 whitespace-pre-wrap">{entreprise.mentions_legales}</p>
           )}
         </div>
 
