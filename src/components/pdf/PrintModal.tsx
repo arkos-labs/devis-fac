@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Printer, ZoomIn, ZoomOut } from 'lucide-react'
+import { X, Printer, ZoomIn, ZoomOut, Download, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import DocumentPDF from './DocumentPDF'
-import type { Devis, Facture, LignePrestation, ParametresCompte } from '@/types/database'
+import type { Devis, Facture, LignePrestation, ParametresCompte, Client } from '@/types/database'
+import { generateDownloadableDocument, downloadBlob } from '@/lib/facturx'
+import toast from 'react-hot-toast'
 import '@/components/pdf/print.css'
 
 type Document = Devis | Facture
@@ -19,6 +21,7 @@ interface PrintModalProps {
 export default function PrintModal({ document, type, onClose }: PrintModalProps) {
   const { user } = useAuth()
   const [zoom, setZoom] = useState(0.75)
+  const [isDownloading, setIsDownloading] = useState(false)
   const printRootRef = useRef<HTMLDivElement | null>(null)
 
   // ── Charger les paramètres ───────────────────────────────
@@ -91,6 +94,36 @@ export default function PrintModal({ document, type, onClose }: PrintModalProps)
 
   const isLoading = paramsLoading || lignesLoading || clientLoading
 
+  // ── Téléchargement direct (PDF simple pour devis, Factur-X pour factures) ──
+  const handleDownload = async () => {
+    if (!parametres || isLoading) return
+    if (validationErrors.length > 0) {
+      alert(`Impossible de générer le document :\n\n${validationErrors.map(e => `• ${e}`).join('\n')}`)
+      return
+    }
+    const client = docWithClient.clients as Client | undefined
+    if (!client) {
+      toast.error('Client introuvable')
+      return
+    }
+    setIsDownloading(true)
+    try {
+      const { blob, filename, isFacturX } = await generateDownloadableDocument({
+        document: docWithClient as Devis | Facture,
+        type,
+        lignes,
+        client,
+        parametres,
+      })
+      downloadBlob(blob, filename)
+      toast.success(isFacturX ? 'Facture Factur-X téléchargée !' : 'Devis téléchargé !')
+    } catch (e) {
+      toast.error(`Erreur génération : ${(e as Error).message}`)
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return createPortal(
     <div
       className="fixed inset-0 z-[9998] bg-slate-900/80 backdrop-blur-sm flex flex-col"
@@ -141,15 +174,27 @@ export default function PrintModal({ document, type, onClose }: PrintModalProps)
             </div>
           )}
 
-          {/* Imprimer / PDF */}
+          {/* Télécharger (PDF ou Factur-X) */}
+          <button
+            onClick={handleDownload}
+            disabled={isLoading || isDownloading}
+            className="btn-primary btn-sm gap-2"
+            id="download-btn"
+            title={type === 'facture' ? 'Télécharger la facture au format Factur-X (PDF/A-3 + XML)' : 'Télécharger le devis en PDF'}
+          >
+            {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {type === 'facture' ? 'Télécharger Factur-X' : 'Télécharger PDF'}
+          </button>
+
+          {/* Imprimer */}
           <button
             onClick={handlePrint}
             disabled={isLoading}
-            className="btn-primary btn-sm gap-2"
+            className="btn-secondary btn-sm gap-2"
             id="print-btn"
           >
             <Printer size={14} />
-            Imprimer / PDF
+            Imprimer
           </button>
 
           {/* Fermer */}

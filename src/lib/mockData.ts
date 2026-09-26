@@ -30,6 +30,13 @@ export const DEMO_PARAMETRES: ParametresCompte = {
   prochain_num_facture: 7,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2026-09-24T00:00:00Z',
+  tva_intracommunautaire: null,
+  iban: null,
+  bic: null,
+  forme_juridique: 'Auto-entrepreneur',
+  code_pays: 'FR',
+  assujetti_tva: false,
+  taux_tva: 0,
 }
 
 // ── Clients ───────────────────────────────────────────────────

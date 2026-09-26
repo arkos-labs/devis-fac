@@ -28,6 +28,13 @@ export interface ParametresCompte {
   prochain_num_facture: number
   created_at: string
   updated_at: string
+  tva_intracommunautaire: string | null
+  iban: string | null
+  bic: string | null
+  forme_juridique: string | null
+  code_pays: string
+  assujetti_tva: boolean
+  taux_tva: number
 }
 
 // ── clients ──────────────────────────────────────────────────
@@ -49,10 +56,6 @@ export interface Client {
   notes: string | null
   date_creation: string
   dernier_contact: string | null
-  type_client?: string | null
-  nom_entreprise?: string | null
-  siret?: string | null
-  tva_intracommunautaire?: string | null
 }
 
 // ── devis ────────────────────────────────────────────────────

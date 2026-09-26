@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ParametresCompte } from '@/types/database'
-import { Save, Building2, Star, FileText, Upload, Loader2, Plus, Trash2, Tag, ShoppingBag, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { Save, Building2, Star, FileText, Upload, Loader2, Plus, Trash2, Tag, ShoppingBag, X, Check, ChevronDown, ChevronRight, Receipt } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { DEMO_PARAMETRES } from '@/lib/mockData'
 import { RemindersSection } from '@/components/RemindersSection'
@@ -372,6 +372,13 @@ export default function ParametresPage() {
         avis_google_url: params.avis_google_url ?? '',
         note_google: params.note_google,
         nombre_avis_google: params.nombre_avis_google,
+        forme_juridique: params.forme_juridique ?? '',
+        tva_intracommunautaire: params.tva_intracommunautaire ?? '',
+        assujetti_tva: params.assujetti_tva ?? false,
+        taux_tva: params.taux_tva ?? 0,
+        iban: params.iban ?? '',
+        bic: params.bic ?? '',
+        code_pays: params.code_pays ?? 'FR',
       })
     }
   }, [params])
@@ -467,6 +474,62 @@ export default function ParametresPage() {
           <div className="form-group sm:col-span-2">
             <label className="label">Adresse complète</label>
             <input className="input" placeholder="12 rue de la Propreté, 75001 Paris" {...f('adresse_entreprise')} />
+          </div>
+          <div className="form-group">
+            <label className="label">Forme juridique</label>
+            <input className="input" placeholder="Auto-entrepreneur, SARL, EI…" {...f('forme_juridique')} />
+          </div>
+        </div>
+      </Section>
+
+      {/* ── Facturation électronique (Factur-X) ──────────── */}
+      <Section icon={Receipt} title="Facturation électronique (Factur-X)">
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 -mt-1">
+            Ces informations sont intégrées dans le fichier XML structuré embarqué dans vos factures
+            (norme Factur-X, obligatoire progressivement pour les échanges B2B en France).
+          </p>
+
+          <label className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+            <input
+              type="checkbox"
+              checked={form.assujetti_tva ?? false}
+              onChange={e => setForm(p => ({ ...p, assujetti_tva: e.target.checked }))}
+              className="w-4 h-4 rounded border-slate-300 text-brand-600 cursor-pointer"
+            />
+            <span className="text-sm font-medium text-slate-700">
+              Je suis assujetti(e) à la TVA (décoché = franchise en base, art. 293 B du CGI)
+            </span>
+          </label>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            {form.assujetti_tva && (
+              <div className="form-group">
+                <label className="label">Taux de TVA appliqué (%)</label>
+                <input
+                  type="number" min="0" max="100" step="0.1"
+                  className="input"
+                  value={form.taux_tva ?? 0}
+                  onChange={e => setForm(p => ({ ...p, taux_tva: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            )}
+            <div className="form-group">
+              <label className="label">N° TVA intracommunautaire</label>
+              <input className="input font-mono" placeholder="FR12345678900" {...f('tva_intracommunautaire')} />
+              <p className="text-xs text-slate-400 mt-1">Laisser vide si non applicable (franchise en base)</p>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+            <div className="form-group">
+              <label className="label">IBAN (pour paiement des factures)</label>
+              <input className="input font-mono" placeholder="FR76 3000 0000 0000 0000 0000 000" {...f('iban')} />
+            </div>
+            <div className="form-group">
+              <label className="label">BIC / SWIFT</label>
+              <input className="input font-mono" placeholder="BNPAFRPPXXX" {...f('bic')} />
+            </div>
           </div>
         </div>
       </Section>
