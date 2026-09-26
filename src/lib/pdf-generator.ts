@@ -31,17 +31,18 @@ function ensureSpace(ctx: Ctx, needed: number) {
 // La police standard (WinAnsi) ne couvre que Latin-1 : on retire les emojis/symboles
 // exotiques que des champs libres (notes, mentions légales...) pourraient contenir,
 // plutôt que de planter la génération du PDF.
-function sanitizeForPdf(str: string): string {
+function sanitizeForPdf(str: string | null | undefined): string {
+  if (!str) return ''
   return Array.from(str).map(ch => (ch.codePointAt(0)! <= 0xff ? ch : '')).join('')
 }
 
-function text(ctx: Ctx, str: string, x: number, size = 10, bold = false, color = rgb(0.1, 0.1, 0.12)) {
+function text(ctx: Ctx, str: string | null | undefined, x: number, size = 10, bold = false, color = rgb(0.1, 0.1, 0.12)) {
   ctx.page.drawText(sanitizeForPdf(str), { x, y: ctx.y, size, font: bold ? ctx.fontBold : ctx.font, color })
 }
 
 // Découpe un texte en lignes qui tiennent dans maxWidth, pour éviter qu'une
 // description longue ne déborde sur les colonnes voisines du tableau.
-function wrapText(font: PDFFont, str: string, maxWidth: number, size: number): string[] {
+function wrapText(font: PDFFont, str: string | null | undefined, maxWidth: number, size: number): string[] {
   const words = sanitizeForPdf(str).split(/\s+/).filter(Boolean)
   if (words.length === 0) return ['']
   const lines: string[] = []

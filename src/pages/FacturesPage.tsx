@@ -118,7 +118,7 @@ export default function FacturesPage() {
           montant_total: montantTotal,
           note_google_snapshot: params?.note_google ?? null,
           nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
-        }).select('*, clients(email)').single()
+        }).select('*, clients(*)').single()
         if (error) throw error
         factureId = newFacture.id
         newFactureFull = newFacture as unknown as Facture
