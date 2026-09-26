@@ -99,7 +99,7 @@ export default function DevisPage() {
       if (lignesError) throw lignesError
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['devis'] })
+      qc.invalidateQueries({ queryKey: ['devis', user?.id] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success(editingDevis ? 'Devis mis à jour !' : 'Devis créé !')
       closeModal()
@@ -117,7 +117,7 @@ export default function DevisPage() {
       return data
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['devis'] })
+      qc.invalidateQueries({ queryKey: ['devis', user?.id] })
       qc.invalidateQueries({ queryKey: ['factures'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Devis converti en facture !')
@@ -132,7 +132,7 @@ export default function DevisPage() {
       if (error) throw error
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['devis'] })
+      qc.invalidateQueries({ queryKey: ['devis', user?.id] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
     },
     onError: (e) => toast.error(`Erreur : ${(e as Error).message}`),
@@ -188,7 +188,7 @@ export default function DevisPage() {
       return newDevis
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['devis'] })
+      qc.invalidateQueries({ queryKey: ['devis', user?.id] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Devis dupliqué avec succès !')
     },
