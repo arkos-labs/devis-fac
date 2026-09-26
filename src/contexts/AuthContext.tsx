@@ -11,7 +11,7 @@ const DEMO_FAKE_USER = {
   email: 'demo@cleanpro.fr',
   role: 'authenticated',
   app_metadata: {},
-  user_metadata: { nom_entreprise: 'CleanPro Nettoyage' },
+  user_metadata: { nom_entreprise: 'Mon Entreprise' },
   aud: 'authenticated',
   created_at: '2024-01-01T00:00:00Z',
 } as unknown as User

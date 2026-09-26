@@ -450,7 +450,7 @@ export default function ParametresPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="form-group">
             <label className="label">Nom de l'entreprise</label>
-            <input className="input" placeholder="CleanPro Nettoyage" {...f('nom_entreprise')} />
+            <input className="input" placeholder="Mon Entreprise" {...f('nom_entreprise')} />
           </div>
           <div className="form-group">
             <label className="label">SIRET</label>
