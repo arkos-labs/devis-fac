@@ -57,15 +57,7 @@ export default function LandingPage() {
             <span className="flex items-center gap-1.5"><CheckCircle2 size={16} className="text-brand-500" /> Installation en 1 min</span>
           </div>
 
-          {/* Hero Image */}
-          <div className="mt-16 relative mx-auto max-w-5xl animate-fade-in" style={{ animationDelay: '600ms' }}>
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent z-10 bottom-0 h-32" />
-            <img 
-              src="/hero-dashboard.jpg" 
-              alt="Dashboard CRM Pro" 
-              className="rounded-3xl shadow-2xl border border-slate-200 object-cover transform [transform:perspective(1000px)_rotateX(2deg)] hover:[transform:perspective(1000px)_rotateX(0deg)] transition-transform duration-700 ease-out"
-            />
-          </div>
+
         </div>
       </section>
 
