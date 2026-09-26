@@ -58,9 +58,12 @@ export function useDocumentDownload() {
     if (type === 'devis') {
       const d = document as Devis
       const valDate = d.date_validite ? new Date(d.date_validite).toLocaleDateString('fr-FR') : '—'
+      const signatureLine = d.signature_activee && d.signature_token
+        ? `\n\nPour valider ce devis, signez-le en ligne ici :\n${window.location.origin}/devis/signature/${d.signature_token}\n`
+        : ''
       return {
         subject: `Devis — ${titre}`,
-        body: `Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${titre}.\n\nMontant total : ${total}\nValidité : jusqu'au ${valDate}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`,
+        body: `Bonjour,\n\nVeuillez trouver ci-joint votre devis pour : ${titre}.\n\nMontant total : ${total}\nValidité : jusqu'au ${valDate}${signatureLine}\n\nN'hésitez pas à me contacter pour toute question.\n\nCordialement`,
       }
     }
     const f = document as Facture

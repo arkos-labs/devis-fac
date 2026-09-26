@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import type { Devis, Client } from '@/types/database'
 import {
   Plus, Search, Zap, FileText,
-  ArrowRight, Copy, Eye, Pencil, Download, Loader2, Archive
+  ArrowRight, Copy, Eye, Pencil, Download, Loader2, Archive, PenTool, Link2
 } from 'lucide-react'
 import PrintModal from '@/components/pdf/PrintModal'
 import DevisModal, { type LigneForm, type DevisFormData } from '@/components/devis/DevisModal'
@@ -70,6 +70,8 @@ export default function DevisPage() {
           notes_client: form.notes_client || null,
           notes_internes: form.notes_internes || null,
           titre: form.titre || null,
+          signature_activee: form.signature_activee,
+          signature_token: form.signature_token,
         }).eq('id', editingDevis.id)
         if (error) throw error
         devisId = editingDevis.id
@@ -97,6 +99,8 @@ export default function DevisPage() {
           statut: 'en_attente',
           note_google_snapshot: params?.note_google ?? null,
           nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
+          signature_activee: form.signature_activee,
+          signature_token: form.signature_token,
         }).select().single()
         if (error) throw error
         devisId = newDevis.id
@@ -243,6 +247,14 @@ export default function DevisPage() {
     accepte:    { label: 'Accepté',    cls: 'badge-green' },
     refuse:     { label: 'Refusé',     cls: 'badge-red' },
     expire:     { label: 'Expiré',     cls: 'badge-gray' },
+    facture:    { label: 'Facturé',    cls: 'badge-blue' },
+    signe:      { label: 'Signé ✓',    cls: 'badge-green' },
+  }
+
+  const copierLienSignature = (d: Devis) => {
+    const url = `${window.location.origin}/devis/signature/${d.signature_token}`
+    navigator.clipboard.writeText(url)
+    toast.success('Lien de signature copié')
   }
 
   return (
@@ -304,8 +316,10 @@ export default function DevisPage() {
             { value: 'tous', label: 'Tous les statuts' },
             { value: 'en_attente', label: 'En attente' },
             { value: 'accepte', label: 'Accepté' },
+            { value: 'signe', label: 'Signé' },
             { value: 'refuse', label: 'Refusé' },
             { value: 'expire', label: 'Expiré' },
+            { value: 'facture', label: 'Facturé' },
           ]}
         />
       </div>
@@ -344,25 +358,43 @@ export default function DevisPage() {
                         {d.genere_par_ia && (
                           <Zap size={11} className="text-amber-400" />
                         )}
+                        {d.signature_activee && (
+                          <PenTool size={11} className="text-violet-500" />
+                        )}
                       </div>
                     </td>
                     <td className="font-medium">{client?.nom ?? '—'}</td>
                     <td className="text-slate-400">{formatDate(d.date_creation)}</td>
                     <td className="font-bold">{formatEuros(d.montant_total)}</td>
                     <td>
-                      <select
-                        value={d.statut}
-                        disabled={!isSubscribed}
-                        onChange={e => updateStatut.mutate({ id: d.id, statut: e.target.value })}
-                        className={`${cfg.cls} badge border-0 bg-transparent font-semibold text-xs ${isSubscribed ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
-                      >
-                        {Object.entries(STATUT_CONFIG).map(([k, v]) => (
-                          <option key={k} value={k}>{v.label}</option>
-                        ))}
-                      </select>
+                      {d.signature_activee ? (
+                        <span className={`${cfg.cls} badge font-semibold text-xs`} title="Signature électronique activée — le statut se met à jour automatiquement">
+                          {d.statut === 'en_attente' ? 'En attente de signature' : cfg.label}
+                        </span>
+                      ) : (
+                        <select
+                          value={d.statut}
+                          disabled={!isSubscribed}
+                          onChange={e => updateStatut.mutate({ id: d.id, statut: e.target.value })}
+                          className={`${cfg.cls} badge border-0 bg-transparent font-semibold text-xs ${isSubscribed ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                        >
+                          {Object.entries(STATUT_CONFIG).filter(([k]) => k !== 'signe').map(([k, v]) => (
+                            <option key={k} value={k}>{v.label}</option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td>
                       <div className="flex items-center gap-1">
+                        {d.signature_activee && (
+                          <button
+                            title="Copier le lien de signature"
+                            onClick={() => copierLienSignature(d)}
+                            className="btn-icon btn-ghost btn-sm text-violet-600 hover:bg-violet-50"
+                          >
+                            <Link2 size={14} />
+                          </button>
+                        )}
                         <button
                           title={isSubscribed ? 'Modifier' : 'Abonnement requis'}
                           disabled={!isSubscribed}

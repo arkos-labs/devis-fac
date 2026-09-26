@@ -11,6 +11,7 @@ import ParametresPage from '@/pages/ParametresPage'
 import AbonnementPage from '@/pages/AbonnementPage'
 import ClientDetailPage from '@/pages/ClientDetailPage'
 import LandingPage from '@/pages/LandingPage'
+import DevisSignaturePage from '@/pages/DevisSignaturePage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -47,6 +48,7 @@ export default function App() {
         path="/signup"
         element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />}
       />
+      <Route path="/devis/signature/:token" element={<DevisSignaturePage />} />
       <Route
         element={
           <RequireAuth>

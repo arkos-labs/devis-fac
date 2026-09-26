@@ -7,7 +7,7 @@ import { formatEuros } from '@/lib/utils'
 import type { Client, IAPrestationItem, Devis } from '@/types/database'
 import {
   X, Plus, Zap, Loader2, FileText,
-  Trash2, Tag, Check, Mail
+  Trash2, Tag, Check, Mail, PenTool
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Select from '@/components/ui/Select'
@@ -31,6 +31,7 @@ export interface DevisFormData {
   notes_client: string; notes_internes: string
   genere_par_ia: boolean; prompt_ia: string
   titre: string
+  signature_activee: boolean; signature_token: string
 }
 
 interface CatItem {
@@ -78,7 +79,8 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
   const [form, setForm] = useState<DevisFormData>({
     client_id: initialClientId ?? '', date_validite: dateIn30Days(), notes_client: '',
-    notes_internes: '', genere_par_ia: false, prompt_ia: '', titre: ''
+    notes_internes: '', genere_par_ia: false, prompt_ia: '', titre: '',
+    signature_activee: false, signature_token: crypto.randomUUID(),
   })
   const [showIA, setShowIA] = useState(false)
   const [promptIA, setPromptIA] = useState('')
@@ -94,7 +96,9 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
         notes_internes: editingDevis.notes_internes || '',
         genere_par_ia: editingDevis.genere_par_ia,
         prompt_ia: editingDevis.prompt_ia || '',
-        titre: editingDevis.titre || ''
+        titre: editingDevis.titre || '',
+        signature_activee: editingDevis.signature_activee ?? false,
+        signature_token: editingDevis.signature_token || crypto.randomUUID(),
       })
       if (editingDevis.lignes_prestation && editingDevis.lignes_prestation.length > 0) {
         const sortedLignes = [...editingDevis.lignes_prestation].sort((a, b) => a.ordre - b.ordre)
@@ -660,6 +664,25 @@ export default function DevisModal({ editingDevis, initialClientId, onSave, onCl
                 placeholder="Non visible sur le PDF" />
             </div>
           </div>
+
+          {/* ── Signature électronique ───────────────────────── */}
+          <label className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 cursor-pointer hover:border-violet-200 transition-colors">
+            <input
+              type="checkbox"
+              checked={form.signature_activee}
+              onChange={e => setForm(f => ({ ...f, signature_activee: e.target.checked }))}
+              className="mt-0.5 w-4 h-4 rounded accent-violet-600"
+            />
+            <div>
+              <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                <PenTool size={13} className="text-violet-600" /> Signature électronique
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Le client reçoit un lien pour signer ou refuser le devis en ligne. Le statut se met à jour automatiquement dès sa réponse — vous n'avez rien à faire.
+                {!form.signature_activee && ' Si désactivé, c\'est vous qui choisissez le statut manuellement.'}
+              </p>
+            </div>
+          </label>
         </div>
 
         {/* ── Actions (footer fixe) ──────────────────────────── */}

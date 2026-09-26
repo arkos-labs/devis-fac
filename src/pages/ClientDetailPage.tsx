@@ -254,6 +254,8 @@ export default function ClientDetailPage() {
         statut: 'en_attente',
         note_google_snapshot: params?.note_google ?? null,
         nombre_avis_google_snapshot: params?.nombre_avis_google ?? null,
+        signature_activee: form.signature_activee,
+        signature_token: form.signature_token,
       }).select().single()
       if (error) throw error
 
