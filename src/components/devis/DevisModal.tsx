@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSubscription } from '@/lib/useSubscription'
 import { formatEuros } from '@/lib/utils'
 import type { Client, IAPrestationItem, Devis } from '@/types/database'
 import {
@@ -72,6 +73,7 @@ const dateIn30Days = () => {
 
 export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: Props) {
   const { user } = useAuth()
+  const { isActive: isSubscribed } = useSubscription()
   const [rows, setRows] = useState<PrestationRow[]>([newRow()])
   const [form, setForm] = useState<DevisFormData>({
     client_id: '', date_validite: dateIn30Days(), notes_client: '',
@@ -306,6 +308,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
   }
 
   const handleSave = () => {
+    if (!isSubscribed) return toast.error('Abonnez-vous pour créer un devis')
     if (!form.client_id) return toast.error('Sélectionnez un client')
     if (!form.titre.trim()) return toast.error('Ajoutez un titre au devis')
     if (rows.every(r => !r.description)) return toast.error('Ajoutez au moins une prestation')
@@ -313,6 +316,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
   }
 
   const handleSendEmail = () => {
+    if (!isSubscribed) return toast.error('Abonnez-vous pour envoyer un devis')
     const selectedClient = clients.find(c => c.id === form.client_id)
     const email = selectedClient?.email || ''
     if (!email) return toast.error("Ce client n'a pas d'email renseigné")
@@ -486,9 +490,9 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
             {rows.map((row, rowIndex) => {
               const upsells = row.catalogueId ? upsellsOf(row.catalogueId) : []
               return (
-                <div key={row.uid} className="rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-brand-200 transition-all duration-150">
+                <div key={row.uid} className="rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-brand-200 transition-all duration-150">
                   {/* ─ Ligne principale avec numéro ─ */}
-                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-slate-50 to-white">
+                  <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-slate-50 to-white rounded-2xl">
                     <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {rowIndex + 1}
                     </span>
@@ -539,7 +543,7 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
 
                   {/* ─ Upsells de cette prestation ─ */}
                   {(upsells.length > 0 || row.options.length > 0) && (
-                    <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 space-y-2">
+                    <div className="border-t border-slate-100 bg-slate-50/50 px-3 py-2.5 space-y-2 rounded-b-2xl">
 
                       {/* Upsells catalogue à cocher */}
                       {upsells.length > 0 && (
@@ -672,11 +676,20 @@ export default function DevisModal({ editingDevis, onSave, onClose, isSaving }: 
           <div className="flex gap-3">
             <button onClick={onClose} className="btn-secondary flex-1">Annuler</button>
             {form.client_id && (
-              <button onClick={handleSendEmail} className="btn bg-blue-50 text-blue-700 hover:bg-blue-100 gap-1.5 px-3" title="Envoyer par email">
+              <button
+                onClick={handleSendEmail}
+                disabled={!isSubscribed}
+                className="btn bg-blue-50 text-blue-700 hover:bg-blue-100 gap-1.5 px-3 disabled:opacity-40"
+                title={isSubscribed ? 'Envoyer par email' : 'Abonnement requis pour envoyer'}
+              >
                 <Mail size={14} />
               </button>
             )}
-            <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 gap-1.5">
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !isSubscribed}
+              title={isSubscribed ? undefined : 'Abonnement requis pour créer un devis'}
+              className="btn-primary flex-1 gap-1.5">
               {isSaving
                 ? <><Loader2 size={13} className="animate-spin" /> Enregistrement…</>
                 : editingDevis

@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useSubscription } from '@/lib/useSubscription'
 import { formatEuros, formatDate } from '@/lib/utils'
+import { Link } from 'react-router-dom'
 import type { Facture, Client } from '@/types/database'
 import {
   Plus, Search, Receipt, CheckCircle,
@@ -36,6 +38,7 @@ const MOYENS = [
 
 export default function FacturesPage() {
   const { user } = useAuth()
+  const { isActive: isSubscribed } = useSubscription()
   const qc = useQueryClient()
   const { download, downloadingId } = useDocumentDownload()
   const { exportMonth, isExporting } = useMonthArchive()
@@ -69,6 +72,7 @@ export default function FacturesPage() {
   // ── Mutation créer/modifier facture ───────────────────────────
   const saveFacture = useMutation({
     mutationFn: async ({ form, lignes }: { form: FactureFormData; lignes: LigneForm[] }) => {
+      if (!isSubscribed) throw new Error('Abonnez-vous pour créer une facture')
       let factureId: string
 
       if (editingFacture) {
@@ -287,10 +291,23 @@ export default function FacturesPage() {
             Conforme loi anti-fraude
           </div>
         </div>
-        <button id="add-facture-btn" onClick={openNew} className="btn-primary">
+        <button
+          id="add-facture-btn"
+          onClick={openNew}
+          disabled={!isSubscribed}
+          title={isSubscribed ? undefined : 'Abonnement requis pour créer une facture'}
+          className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <Plus size={16} /> Nouvelle facture
         </button>
       </div>
+
+      {!isSubscribed && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Abonnement inactif — la création et l'envoi de factures sont désactivés.{' '}
+          <Link to="/abonnement" className="font-semibold underline">S'abonner</Link>
+        </div>
+      )}
 
       {/* ── Résumé financier ────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
