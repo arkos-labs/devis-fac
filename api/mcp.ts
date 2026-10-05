@@ -439,7 +439,11 @@ async function handle(req: Request): Promise<Response> {
     return new Response('Serveur MCP non configuré (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).', { status: 500 })
   }
 
-  const token = /^Bearer (.+)$/i.exec(req.headers.get('authorization') ?? '')?.[1]?.trim()
+  // Clé en en-tête Bearer (Claude Code, Claude Desktop) ou dans l'adresse /mcp/<clé>
+  // (claude.ai et ChatGPT, qui n'envoient pas d'en-tête personnalisé).
+  const token =
+    /^Bearer (.+)$/i.exec(req.headers.get('authorization') ?? '')?.[1]?.trim() ??
+    new URL(req.url).searchParams.get('key')?.trim()
   if (!token || !token.startsWith('crm_')) return unauthorized('Clé manquante ou invalide.')
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {

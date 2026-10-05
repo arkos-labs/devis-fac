@@ -29,7 +29,7 @@ export function McpKeysSection() {
   const [nom, setNom] = useState('ChatGPT')
   const [newKey, setNewKey] = useState<string | null>(null)
 
-  const mcpUrl = `${window.location.origin}/api/mcp`
+  const mcpBase = window.location.origin
 
   const { data: cles = [], isLoading } = useQuery({
     queryKey: ['mcp_cles'],
@@ -94,26 +94,30 @@ export function McpKeysSection() {
       </p>
 
       <div className="text-sm mb-4">
-        <p className="text-slate-500 mb-1">Adresse du serveur à renseigner dans ChatGPT</p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 bg-slate-100 rounded px-2 py-1 text-xs break-all">{mcpUrl}</code>
-          <button className="btn-secondary" onClick={() => copy(mcpUrl)} aria-label="Copier l'adresse">
-            <Copy size={14} />
-          </button>
-        </div>
+        <p className="text-slate-500 mb-1">
+          Créez une clé : vous obtiendrez l'adresse complète à coller dans Claude ou ChatGPT
+          (Paramètres → Connecteurs → Ajouter un connecteur personnalisé, sans authentification).
+        </p>
       </div>
 
       {newKey && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-4 text-sm">
-          <p className="font-medium text-amber-800 mb-1">Copiez cette clé maintenant : elle ne sera plus affichée.</p>
+          <p className="font-medium text-amber-800 mb-1">
+            Copiez cette adresse maintenant : elle contient votre clé secrète et ne sera plus affichée.
+            Ne la partagez avec personne.
+          </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-white rounded px-2 py-1 text-xs break-all">{newKey}</code>
-            <button className="btn-secondary" onClick={() => copy(newKey)} aria-label="Copier la clé">
+            <code className="flex-1 bg-white rounded px-2 py-1 text-xs break-all">{`${mcpBase}/mcp/${newKey}`}</code>
+            <button className="btn-secondary" onClick={() => copy(`${mcpBase}/mcp/${newKey}`)} aria-label="Copier l'adresse">
               <Copy size={14} />
             </button>
           </div>
+          <p className="text-xs text-amber-700 mt-2">
+            Claude Code / Claude Desktop : vous pouvez aussi utiliser {`${mcpBase}/api/mcp`} avec l'en-tête
+            {' '}<code>Authorization: Bearer {newKey.slice(0, 8)}…</code>
+          </p>
           <button className="text-xs text-amber-700 underline mt-2" onClick={() => setNewKey(null)}>
-            J'ai copié la clé
+            J'ai copié l'adresse
           </button>
         </div>
       )}
