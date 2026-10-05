@@ -7,6 +7,7 @@ import { Save, Building2, Star, FileText, Upload, Loader2, Plus, Trash2, Tag, Sh
 import toast from 'react-hot-toast'
 import { DEMO_PARAMETRES } from '@/lib/mockData'
 import { RemindersSection } from '@/components/RemindersSection'
+import { McpKeysSection } from '@/components/McpKeysSection'
 import { formatStars } from '@/lib/utils'
 
 // ── Types catalogue ───────────────────────────────────────────
@@ -681,6 +682,9 @@ export default function ParametresPage() {
 
       {/* ── Relances automatiques ────────────────────────── */}
       <RemindersSection />
+
+      {/* ── Accès ChatGPT (MCP) ── */}
+      <McpKeysSection />
 
       {/* ── Numérotation ─────────────────────────────────── */}
       {params && (
