@@ -437,8 +437,12 @@ function unauthorized(message: string) {
 }
 
 async function handle(req: Request): Promise<Response> {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return new Response('Serveur MCP non configuré (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).', { status: 500 })
+  const manquantes = [
+    !SUPABASE_URL && 'SUPABASE_URL (ou VITE_SUPABASE_URL)',
+    !SERVICE_ROLE_KEY && 'SUPABASE_SERVICE_ROLE_KEY',
+  ].filter(Boolean)
+  if (manquantes.length) {
+    return new Response(`Serveur MCP non configuré. Variable(s) manquante(s) : ${manquantes.join(', ')}`, { status: 500 })
   }
 
   // Clé en en-tête Bearer (Claude Code, Claude Desktop) ou dans l'adresse /mcp/<clé>
