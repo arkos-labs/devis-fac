@@ -430,7 +430,9 @@ function buildServer(db: SupabaseClient, userId: string) {
 function unauthorized(message: string) {
   return new Response(JSON.stringify({ error: 'unauthorized', error_description: message }), {
     status: 401,
-    headers: { 'content-type': 'application/json', 'www-authenticate': 'Bearer' },
+    // Volontairement sans en-tête WWW-Authenticate : il déclencherait une tentative OAuth
+    // côté Claude/ChatGPT, alors que l'accès se fait par clé.
+    headers: { 'content-type': 'application/json' },
   })
 }
 
@@ -455,7 +457,12 @@ async function handle(req: Request): Promise<Response> {
     .select('id, user_id')
     .eq('cle_hash', await sha256Hex(token))
     .maybeSingle()
-  if (error || !cle) return unauthorized('Clé inconnue ou révoquée.')
+  // Erreur de base (migration non exécutée, mauvaise clé service_role…) ≠ clé inconnue
+  if (error) {
+    console.error('MCP: lecture mcp_cles impossible', error.message)
+    return new Response(`Erreur serveur MCP : ${error.message}`, { status: 500 })
+  }
+  if (!cle) return unauthorized('Clé inconnue ou révoquée.')
 
   // Trace d'utilisation (sans bloquer la réponse en cas d'échec)
   await db.from('mcp_cles').update({ derniere_utilisation: new Date().toISOString() }).eq('id', cle.id)
