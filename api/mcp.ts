@@ -140,7 +140,7 @@ function buildServer(db: SupabaseClient, userId: string) {
       title: 'Lister les devis',
       description: 'Liste les devis, filtrables par statut et par client.',
       inputSchema: {
-        statut: z.enum(['en_attente', 'accepte', 'refuse', 'expire']).optional(),
+        statut: z.enum(['en_attente', 'accepte', 'refuse', 'expire', 'facture']).optional(),
         client_id: z.string().uuid().optional(),
         limite: limitSchema,
       },
@@ -275,7 +275,7 @@ function buildServer(db: SupabaseClient, userId: string) {
       annotations: READ_ONLY,
     },
     async () => {
-      const { data, error } = await db.rpc('get_dashboard_stats', { p_user_id: userId })
+      const { data, error } = await db.rpc('mcp_dashboard_stats', { p_user_id: userId })
       return error ? fail(error.message) : json(data)
     },
   )
@@ -326,7 +326,7 @@ function buildServer(db: SupabaseClient, userId: string) {
       if (!(await requireSubscription(db, userId))) return fail(NO_SUBSCRIPTION)
       if (!(await clientAppartient(db, userId, client_id))) return fail('Client introuvable.')
 
-      const { data: numero, error: numErr } = await db.rpc('get_next_numero', { p_user_id: userId, p_type: 'devis' })
+      const { data: numero, error: numErr } = await db.rpc('mcp_next_numero', { p_user_id: userId, p_type: 'devis' })
       if (numErr) return fail(numErr.message)
 
       const { data: devis, error } = await db
@@ -374,7 +374,7 @@ function buildServer(db: SupabaseClient, userId: string) {
       if (!(await requireSubscription(db, userId))) return fail(NO_SUBSCRIPTION)
       if (!(await clientAppartient(db, userId, client_id))) return fail('Client introuvable.')
 
-      const { data: numero, error: numErr } = await db.rpc('get_next_numero', { p_user_id: userId, p_type: 'facture' })
+      const { data: numero, error: numErr } = await db.rpc('mcp_next_numero', { p_user_id: userId, p_type: 'facture' })
       if (numErr) return fail(numErr.message)
 
       // Total injecté dès la création : la facture est inaltérable ensuite (comme dans l'application).
@@ -411,13 +411,13 @@ function buildServer(db: SupabaseClient, userId: string) {
     'convertir_devis_en_facture',
     {
       title: 'Convertir un devis en facture',
-      description: "Crée la facture correspondant à un devis existant (échéance à 30 jours) et marque le devis comme accepté. Un devis ne peut être converti qu'une fois.",
+      description: "Crée la facture d'un devis au statut « accepté » (échéance à 30 jours) ; le devis passe alors au statut « facture ». Un devis en attente, refusé ou déjà facturé ne peut pas être converti.",
       inputSchema: { devis_id: z.string().uuid() },
       annotations: WRITE,
     },
     async ({ devis_id }) => {
       if (!(await requireSubscription(db, userId))) return fail(NO_SUBSCRIPTION)
-      const { data, error } = await db.rpc('convertir_devis_en_facture', { p_devis_id: devis_id, p_user_id: userId })
+      const { data, error } = await db.rpc('mcp_convertir_devis_en_facture', { p_devis_id: devis_id, p_user_id: userId })
       if (error) return fail(error.message)
       const { data: f } = await db.from('factures').select('id, numero, montant_total').eq('id', data as string).eq('user_id', userId).maybeSingle()
       return json({ cree: true, facture: f })
