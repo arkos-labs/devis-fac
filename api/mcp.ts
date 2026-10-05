@@ -1,5 +1,5 @@
-// Serveur MCP du CRM (consultation + création de clients, devis et factures) — Streamable HTTP, sans état.
-// Aucune modification ni suppression de l'existant n'est exposée.
+// Serveur MCP du CRM (consultation, création de clients/devis/factures, modification des devis non signés)
+// — Streamable HTTP, sans état. Aucune suppression, et aucune modification des factures ni des clients.
 // L'accès se fait avec une clé dédiée (table mcp_cles, stockée hachée) qui ne vaut
 // QUE pour ce endpoint et QUE pour le compte qui l'a créée. Le serveur utilise la clé
 // service_role, mais uniquement via les requêtes fixes ci-dessous : colonnes explicites,
@@ -353,6 +353,73 @@ function buildServer(db: SupabaseClient, userId: string) {
       }
       const total = lignes.reduce((sum, l) => sum + l.quantite * l.prix_unitaire, 0)
       return json({ cree: true, id: devis.id, numero: devis.numero, montant_total: total })
+    },
+  )
+
+  server.registerTool(
+    'modifier_devis',
+    {
+      title: 'Modifier un devis',
+      description:
+        "Modifie un devis NON signé et non facturé (statut en attente, refusé ou expiré) : titre, date de validité, notes client, client, et/ou lignes de prestation (si 'lignes' est fourni, il REMPLACE toutes les lignes existantes). Les champs omis restent inchangés. Impossible sur un devis accepté, signé ou facturé, et jamais sur une facture.",
+      inputSchema: {
+        devis_id: z.string().uuid(),
+        client_id: z.string().uuid().optional(),
+        titre: z.string().max(200).optional(),
+        date_validite: dateSchema.optional(),
+        notes_client: z.string().max(2000).optional(),
+        lignes: z.array(ligneSchema).min(1).max(50).optional(),
+      },
+      annotations: { ...WRITE, idempotentHint: true },
+    },
+    async ({ devis_id, client_id, titre, date_validite, notes_client, lignes }) => {
+      if (!(await requireSubscription(db, userId))) return fail(NO_SUBSCRIPTION)
+
+      const { data: devis, error: gErr } = await db
+        .from('devis')
+        .select('id, numero, statut')
+        .eq('id', devis_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (gErr) return fail(gErr.message)
+      if (!devis) return fail('Devis introuvable.')
+      if (!['en_attente', 'refuse', 'expire'].includes(devis.statut)) {
+        return fail(`Le devis ${devis.numero} est au statut « ${devis.statut} » : il ne peut plus être modifié.`)
+      }
+      if (client_id && !(await clientAppartient(db, userId, client_id))) return fail('Client introuvable.')
+
+      const champs = Object.fromEntries(
+        Object.entries({ client_id, titre, date_validite, notes_client }).filter(([, v]) => v !== undefined),
+      )
+      if (!Object.keys(champs).length && !lignes) return fail('Aucune modification demandée.')
+
+      if (Object.keys(champs).length) {
+        const { error } = await db.from('devis').update(champs).eq('id', devis_id).eq('user_id', userId)
+        if (error) return fail(error.message)
+      }
+
+      if (lignes) {
+        // Insérer les nouvelles lignes AVANT de supprimer les anciennes : en cas d'échec, rien n'est perdu.
+        const { data: anciennes, error: aErr } = await db
+          .from('lignes_prestation')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('document_type', 'devis')
+          .eq('document_id', devis_id)
+        if (aErr) return fail(aErr.message)
+
+        const { error: iErr } = await insertLignes(db, userId, 'devis', devis_id, lignes)
+        if (iErr) return fail(iErr.message)
+
+        const ids = (anciennes ?? []).map((l) => l.id)
+        if (ids.length) {
+          const { error: dErr } = await db.from('lignes_prestation').delete().in('id', ids).eq('user_id', userId)
+          if (dErr) return fail(`Nouvelles lignes ajoutées mais anciennes non supprimées : ${dErr.message}`)
+        }
+      }
+
+      const { data: maj } = await db.from('devis').select(DEVIS_COLS).eq('id', devis_id).eq('user_id', userId).maybeSingle()
+      return json({ modifie: true, devis: maj })
     },
   )
 
