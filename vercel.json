@@ -5,7 +5,7 @@
       "destination": "/api/mcp?key=:key"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|[.]well-known/).*)",
       "destination": "/index.html"
     }
   ]
