@@ -62,7 +62,7 @@ export function McpKeysSection() {
     },
     onSuccess: (key) => {
       setNewKey(key)
-      setReveal(false) // masquée par défaut : l'utilisateur la révèle ou la copie à la demande
+      setReveal(true) // visible à la création pour pouvoir la copier ; masquée après rafraîchissement
       qc.invalidateQueries({ queryKey: ['mcp_cles'] })
     },
     onError: () => toast.error('Impossible de créer la clé'),
