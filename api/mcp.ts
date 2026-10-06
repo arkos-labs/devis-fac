@@ -1,4 +1,4 @@
-// Serveur MCP du CRM (consultation, création de clients/devis/factures, modification des devis non signés)
+// Serveur MCP du CRM (consultation, création de clients/devis/factures/catalogue, modification des devis non signés)
 // — Streamable HTTP, sans état. Aucune suppression, et aucune modification des factures ni des clients.
 // L'accès se fait avec une clé dédiée (table mcp_cles, stockée hachée) qui ne vaut
 // QUE pour ce endpoint et QUE pour le compte qui l'a créée. Le serveur utilise la clé
@@ -277,6 +277,99 @@ function buildServer(db: SupabaseClient, userId: string) {
     async () => {
       const { data, error } = await db.rpc('mcp_dashboard_stats', { p_user_id: userId })
       return error ? fail(error.message) : json(data)
+    },
+  )
+
+  server.registerTool(
+    'lister_catalogue',
+    {
+      title: 'Lister le catalogue de prestations',
+      description: 'Prestations du catalogue avec leur prix par défaut, leur unité et leurs options (upsells).',
+      inputSchema: {},
+      annotations: READ_ONLY,
+    },
+    async () => {
+      const { data, error } = await db
+        .from('catalogue_prestations')
+        .select('id, nom, prix_defaut, unite, parent_id, is_upsell')
+        .eq('user_id', userId)
+        .order('ordre')
+        .limit(500)
+      if (error) return fail(error.message)
+      const items = data ?? []
+      const prestations = items
+        .filter((i) => !i.is_upsell)
+        .map((p) => ({
+          id: p.id,
+          nom: p.nom,
+          prix_defaut: p.prix_defaut,
+          unite: p.unite,
+          options: items.filter((u) => u.is_upsell && u.parent_id === p.id).map((u) => ({ id: u.id, nom: u.nom, prix_defaut: u.prix_defaut })),
+        }))
+      return json(prestations)
+    },
+  )
+
+  server.registerTool(
+    'creer_prestation_catalogue',
+    {
+      title: 'Ajouter une prestation au catalogue',
+      description:
+        "Ajoute une prestation au catalogue (nom, prix par défaut, unité), avec éventuellement des options (upsells) rattachées. Pour construire un catalogue, appeler cet outil une fois par prestation. Ne modifie ni ne supprime les prestations existantes ; vérifier d'abord avec lister_catalogue pour éviter les doublons.",
+      inputSchema: {
+        nom: z.string().min(1).max(200),
+        prix_defaut: z.number().min(0).max(1000000),
+        unite: z.string().max(20).default('forfait'),
+        options: z
+          .array(z.object({ nom: z.string().min(1).max(200), prix_defaut: z.number().min(0).max(1000000) }))
+          .max(20)
+          .optional(),
+      },
+      annotations: WRITE,
+    },
+    async ({ nom, prix_defaut, unite, options }) => {
+      const { count } = await db
+        .from('catalogue_prestations')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_upsell', false)
+
+      const { data: prestation, error } = await db
+        .from('catalogue_prestations')
+        .insert({
+          user_id: userId,
+          nom: nom.trim(),
+          prix_defaut,
+          unite,
+          categorie: 'custom',
+          is_upsell: false,
+          ordre: (count ?? 0) * 10,
+        })
+        .select('id, nom, prix_defaut, unite')
+        .single()
+      if (error) return fail(error.message)
+
+      let optionsCreees: unknown[] = []
+      if (options?.length) {
+        const { data, error: oErr } = await db
+          .from('catalogue_prestations')
+          .insert(
+            options.map((o, i) => ({
+              user_id: userId,
+              nom: o.nom.trim(),
+              prix_defaut: o.prix_defaut,
+              unite: 'forfait',
+              categorie: 'upsell',
+              is_upsell: true,
+              parent_id: prestation.id,
+              ordre: 100 + i,
+            })),
+          )
+          .select('id, nom, prix_defaut')
+        if (oErr) return fail(`Prestation créée mais options en erreur : ${oErr.message}`)
+        optionsCreees = data ?? []
+      }
+      return json({ cree: true, prestation, options: optionsCreees })
     },
   )
 
