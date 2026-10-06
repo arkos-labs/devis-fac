@@ -95,7 +95,7 @@ export function McpKeysSection() {
       <p className="text-sm text-slate-500 mb-4">
         Permet à ChatGPT de <strong>consulter</strong> vos clients, devis, factures et statistiques, et de{' '}
         <strong>créer</strong> des clients, devis et factures (abonnement requis pour les documents).
-        Il peut modifier un devis non signé, mais jamais une facture, et ne peut rien supprimer. La clé ne donne accès qu'à votre compte et uniquement à cette fonction.
+        Il peut modifier un devis non signé et gérer le catalogue (ajout, modification, suppression), mais jamais modifier une facture ni supprimer un client, un devis ou une facture. La clé ne donne accès qu'à votre compte et uniquement à cette fonction.
       </p>
 
       <div className="text-sm mb-4">

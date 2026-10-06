@@ -1,5 +1,6 @@
 // Serveur MCP du CRM (consultation, création de clients/devis/factures/catalogue, modification des devis non signés)
-// — Streamable HTTP, sans état. Aucune suppression, et aucune modification des factures ni des clients.
+// — Streamable HTTP, sans état. Modification/suppression possibles uniquement pour le catalogue (et
+// modification des devis non signés) ; jamais de suppression de client, devis ou facture, ni de modification de facture.
 // L'accès se fait avec une clé dédiée (table mcp_cles, stockée hachée) qui ne vaut
 // QUE pour ce endpoint et QUE pour le compte qui l'a créée. Le serveur utilise la clé
 // service_role, mais uniquement via les requêtes fixes ci-dessous : colonnes explicites,
@@ -370,6 +371,76 @@ function buildServer(db: SupabaseClient, userId: string) {
         optionsCreees = data ?? []
       }
       return json({ cree: true, prestation, options: optionsCreees })
+    },
+  )
+
+  server.registerTool(
+    'modifier_prestation_catalogue',
+    {
+      title: 'Modifier une prestation du catalogue',
+      description:
+        "Modifie le nom, le prix par défaut ou l'unité d'une prestation (ou d'une option) du catalogue, d'après son id (voir lister_catalogue). Les champs omis restent inchangés. N'affecte pas les devis et factures déjà créés.",
+      inputSchema: {
+        id: z.string().uuid(),
+        nom: z.string().min(1).max(200).optional(),
+        prix_defaut: z.number().min(0).max(1000000).optional(),
+        unite: z.string().max(20).optional(),
+      },
+      annotations: { ...WRITE, idempotentHint: true },
+    },
+    async ({ id, nom, prix_defaut, unite }) => {
+      const champs = Object.fromEntries(
+        Object.entries({ nom: nom?.trim(), prix_defaut, unite }).filter(([, v]) => v !== undefined),
+      )
+      if (!Object.keys(champs).length) return fail('Aucune modification demandée.')
+      const { data, error } = await db
+        .from('catalogue_prestations')
+        .update(champs)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select('id, nom, prix_defaut, unite, is_upsell')
+        .maybeSingle()
+      if (error) return fail(error.message)
+      return data ? json({ modifie: true, prestation: data }) : fail('Prestation introuvable.')
+    },
+  )
+
+  server.registerTool(
+    'supprimer_prestation_catalogue',
+    {
+      title: 'Supprimer une prestation du catalogue',
+      description:
+        "SUPPRIME DÉFINITIVEMENT une prestation du catalogue (et ses options si c'est une prestation principale). N'affecte pas les devis et factures déjà créés. Demander d'abord la confirmation de l'utilisateur, puis passer confirmer=true.",
+      inputSchema: {
+        id: z.string().uuid(),
+        confirmer: z.literal(true).describe("Doit valoir true : l'utilisateur a explicitement confirmé la suppression."),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ id }) => {
+      const { data: item, error: gErr } = await db
+        .from('catalogue_prestations')
+        .select('id, nom, is_upsell')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (gErr) return fail(gErr.message)
+      if (!item) return fail('Prestation introuvable.')
+
+      let optionsSupprimees = 0
+      if (!item.is_upsell) {
+        const { data: opts, error: oErr } = await db
+          .from('catalogue_prestations')
+          .delete()
+          .eq('parent_id', id)
+          .eq('user_id', userId)
+          .select('id')
+        if (oErr) return fail(oErr.message)
+        optionsSupprimees = opts?.length ?? 0
+      }
+      const { error } = await db.from('catalogue_prestations').delete().eq('id', id).eq('user_id', userId)
+      if (error) return fail(error.message)
+      return json({ supprime: true, nom: item.nom, options_supprimees: optionsSupprimees })
     },
   )
 
