@@ -9,6 +9,8 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
+import { genererPdfDevis } from './_devis-pdf'
+import { PDF_LINK_TTL_S, signPdfToken } from './_pdf-link'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
@@ -88,7 +90,7 @@ async function noteGoogle(db: SupabaseClient, userId: string) {
   return { note_google_snapshot: data?.note_google ?? null, nombre_avis_google_snapshot: data?.nombre_avis_google ?? null }
 }
 
-function buildServer(db: SupabaseClient, userId: string) {
+function buildServer(db: SupabaseClient, userId: string, origin: string) {
   const server = new McpServer({ name: 'crm-nettoyage', version: '1.0.0' })
 
   server.registerTool(
@@ -521,6 +523,61 @@ function buildServer(db: SupabaseClient, userId: string) {
   )
 
   server.registerTool(
+    'telecharger_pdf_devis',
+    {
+      title: "Obtenir le PDF d'un devis",
+      description:
+        "Génère le PDF d'un devis (identique à celui du bouton « Télécharger » du site : en-tête, lignes, mentions légales, signature électronique si présente). Renvoie le fichier en pièce jointe PDF (ressource encodée) ET un lien de téléchargement temporaire (valable 15 minutes). Accepte l'id ou le numéro du devis (ex. D-0002).",
+      inputSchema: { id_ou_numero: z.string().min(1).max(64) },
+      annotations: READ_ONLY,
+    },
+    async ({ id_ou_numero }) => {
+      let devisId = id_ou_numero
+      if (!z.string().uuid().safeParse(id_ou_numero).success) {
+        const { data, error } = await db
+          .from('devis')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('numero', id_ou_numero)
+          .maybeSingle()
+        if (error) return fail(error.message)
+        if (!data) return fail('Devis introuvable.')
+        devisId = data.id as string
+      }
+
+      const pdf = await genererPdfDevis(db, userId, devisId)
+      if (!pdf.ok) return fail(pdf.erreur)
+
+      const token = await signPdfToken(SERVICE_ROLE_KEY, userId, devisId)
+      const lien = `${origin}/api/pdf?t=${token}`
+      const base64 = Buffer.from(pdf.bytes).toString('base64')
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                devis: pdf.numero,
+                fichier: pdf.filename,
+                taille_octets: pdf.bytes.length,
+                lien_telechargement: lien,
+                lien_valable_minutes: PDF_LINK_TTL_S / 60,
+                note: 'Le PDF est aussi joint à cette réponse. Le lien est secret : ne le partager qu\'avec le destinataire voulu.',
+              },
+              null,
+              2,
+            ),
+          },
+          {
+            type: 'resource' as const,
+            resource: { uri: `devis://${pdf.filename}`, mimeType: 'application/pdf', blob: base64 },
+          },
+        ],
+      }
+    },
+  )
+
+  server.registerTool(
     'modifier_devis',
     {
       title: 'Modifier un devis',
@@ -702,7 +759,7 @@ async function handle(req: Request): Promise<Response> {
   // Trace d'utilisation (sans bloquer la réponse en cas d'échec)
   await db.from('mcp_cles').update({ derniere_utilisation: new Date().toISOString() }).eq('id', cle.id)
 
-  const server = buildServer(db, cle.user_id as string)
+  const server = buildServer(db, cle.user_id as string, new URL(req.url).origin)
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // sans état : une instance par requête
     enableJsonResponse: true,

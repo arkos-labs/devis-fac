@@ -4,8 +4,8 @@
 // Factur-X avant embarquement du XML).
 // ============================================================
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
-import type { Devis, Facture, LignePrestation, Client, ParametresCompte } from '@/types/database'
-import { formatEuros, formatDateLong } from '@/lib/utils'
+import type { Devis, Facture, LignePrestation, Client, ParametresCompte } from '../types/database'
+import { formatEuros, formatDateLong } from './utils'
 
 const PAGE_W = 595.28 // A4 pt
 const PAGE_H = 841.89
