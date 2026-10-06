@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Bot, Copy, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Bot, Copy, Eye, EyeOff, Loader2, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -12,6 +12,8 @@ interface McpCle {
   derniere_utilisation: string | null
   created_at: string
 }
+
+const MASK = '*'.repeat(24)
 
 async function sha256Hex(value: string) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
@@ -28,8 +30,10 @@ export function McpKeysSection() {
   const qc = useQueryClient()
   const [nom, setNom] = useState('ChatGPT')
   const [newKey, setNewKey] = useState<string | null>(null)
+  const [reveal, setReveal] = useState(false)
 
   const mcpBase = window.location.origin
+  const fullUrl = newKey ? `${mcpBase}/mcp/${newKey}` : ''
 
   const { data: cles = [], isLoading } = useQuery({
     queryKey: ['mcp_cles'],
@@ -58,6 +62,7 @@ export function McpKeysSection() {
     },
     onSuccess: (key) => {
       setNewKey(key)
+      setReveal(false) // masquée par défaut : l'utilisateur la révèle ou la copie à la demande
       qc.invalidateQueries({ queryKey: ['mcp_cles'] })
     },
     onError: () => toast.error('Impossible de créer la clé'),
@@ -103,12 +108,21 @@ export function McpKeysSection() {
       {newKey && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-4 text-sm">
           <p className="font-medium text-amber-800 mb-1">
-            Copiez cette adresse maintenant : elle contient votre clé secrète et ne sera plus affichée.
-            Ne la partagez avec personne.
+            Copiez cette adresse maintenant : elle contient votre clé secrète et ne sera plus récupérable
+            une fois cette page quittée ou rafraîchie. Ne la partagez avec personne.
           </p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-white rounded px-2 py-1 text-xs break-all">{`${mcpBase}/mcp/${newKey}`}</code>
-            <button className="btn-secondary" onClick={() => copy(`${mcpBase}/mcp/${newKey}`)} aria-label="Copier l'adresse">
+            <code className="flex-1 bg-white rounded px-2 py-1 text-xs break-all">
+              {reveal ? fullUrl : `${mcpBase}/mcp/${newKey.slice(0, 8)}${MASK}`}
+            </code>
+            <button
+              className="btn-secondary"
+              onClick={() => setReveal((v) => !v)}
+              aria-label={reveal ? "Masquer l'adresse" : "Afficher l'adresse"}
+            >
+              {reveal ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+            <button className="btn-secondary" onClick={() => copy(fullUrl)} aria-label="Copier l'adresse">
               <Copy size={14} />
             </button>
           </div>
@@ -116,7 +130,10 @@ export function McpKeysSection() {
             Claude Code / Claude Desktop : vous pouvez aussi utiliser {`${mcpBase}/api/mcp`} avec l'en-tête
             {' '}<code>Authorization: Bearer {newKey.slice(0, 8)}…</code>
           </p>
-          <button className="text-xs text-amber-700 underline mt-2" onClick={() => setNewKey(null)}>
+          <button
+            className="text-xs text-amber-700 underline mt-2"
+            onClick={() => { setNewKey(null); setReveal(false) }}
+          >
             J'ai copié l'adresse
           </button>
         </div>
@@ -145,7 +162,7 @@ export function McpKeysSection() {
             <li key={c.id} className="flex items-center justify-between py-2 text-sm">
               <div>
                 <p className="font-medium text-slate-700">
-                  {c.nom} <span className="text-slate-400 font-normal">· {c.prefixe}…</span>
+                  {c.nom} <span className="text-slate-400 font-normal font-mono">· {c.prefixe}{MASK}</span>
                 </p>
                 <p className="text-xs text-slate-400">
                   {c.derniere_utilisation
