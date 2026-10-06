@@ -2,7 +2,7 @@
 // (src/lib/pdf-generator.ts) : le fichier est identique à celui du bouton « Télécharger ».
 // Le préfixe « _ » empêche Vercel d'exposer ce fichier comme une route.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { generateDocumentPdf } from '../src/lib/pdf-generator'
+import { generateDocumentPdf } from '../src/lib/pdf-generator.js'
 import type { Client, Devis, LignePrestation, ParametresCompte } from '../src/types/database'
 
 export type ResultatPdf =

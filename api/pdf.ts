@@ -1,8 +1,8 @@
 // Téléchargement d'un PDF de devis via un lien temporaire signé (voir _pdf-link.ts),
 // émis par l'outil MCP telecharger_pdf_devis.
 import { createClient } from '@supabase/supabase-js'
-import { genererPdfDevis } from './_devis-pdf'
-import { verifyPdfToken } from './_pdf-link'
+import { genererPdfDevis } from './_devis-pdf.js'
+import { verifyPdfToken } from './_pdf-link.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
