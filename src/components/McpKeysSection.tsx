@@ -11,7 +11,27 @@ interface McpCle {
   prefixe: string
   derniere_utilisation: string | null
   created_at: string
+  portee?: 'lecture' | 'complet'
+  expire_le?: string | null
 }
+
+interface McpJournal {
+  id: string
+  created_at: string
+  outil: string
+  resume: string | null
+}
+
+type Portee = 'lecture' | 'complet'
+
+const DUREES: { value: string; label: string; jours: number | null }[] = [
+  { value: 'aucune', label: 'Sans expiration', jours: null },
+  { value: '30', label: 'Expire dans 30 jours', jours: 30 },
+  { value: '90', label: 'Expire dans 90 jours', jours: 90 },
+  { value: '365', label: 'Expire dans 1 an', jours: 365 },
+]
+
+const joursRestants = (iso: string) => Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000)
 
 const MASK = '*'.repeat(24)
 
@@ -31,6 +51,8 @@ export function McpKeysSection() {
   const [nom, setNom] = useState('ChatGPT')
   const [newKey, setNewKey] = useState<string | null>(null)
   const [reveal, setReveal] = useState(false)
+  const [portee, setPortee] = useState<Portee>('complet')
+  const [duree, setDuree] = useState('aucune')
 
   const mcpBase = window.location.origin
   const fullUrl = newKey ? `${mcpBase}/mcp/${newKey}` : ''
@@ -39,6 +61,12 @@ export function McpKeysSection() {
     queryKey: ['mcp_cles'],
     enabled: !!user,
     queryFn: async () => {
+      const complet = await supabase
+        .from('mcp_cles')
+        .select('id, nom, prefixe, derniere_utilisation, created_at, portee, expire_le')
+        .order('created_at', { ascending: false })
+      if (!complet.error) return complet.data as McpCle[]
+      // Migration 006 pas encore exécutée : colonnes portee / expire_le absentes
       const { data, error } = await supabase
         .from('mcp_cles')
         .select('id, nom, prefixe, derniere_utilisation, created_at')
@@ -48,16 +76,43 @@ export function McpKeysSection() {
     },
   })
 
+  const { data: journal = [] } = useQuery({
+    queryKey: ['mcp_journal'],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mcp_journal')
+        .select('id, created_at, outil, resume')
+        .order('created_at', { ascending: false })
+        .limit(10)
+      return error ? [] : (data as McpJournal[])
+    },
+  })
+
   const create = useMutation({
     mutationFn: async () => {
       const key = generateKey()
-      const { error } = await supabase.from('mcp_cles').insert({
+      const jours = DUREES.find((d) => d.value === duree)?.jours ?? null
+      const base = {
         user_id: user!.id,
         nom: nom.trim() || 'ChatGPT',
         prefixe: key.slice(0, 8),
         cle_hash: await sha256Hex(key),
+      }
+      const { error } = await supabase.from('mcp_cles').insert({
+        ...base,
+        portee,
+        expire_le: jours ? new Date(Date.now() + jours * 86400000).toISOString() : null,
       })
-      if (error) throw error
+      if (error) {
+        // Migration 006 absente : possible seulement pour une clé standard (complet, sans expiration)
+        if (/portee|expire_le/i.test(error.message) && portee === 'complet' && !jours) {
+          const retry = await supabase.from('mcp_cles').insert(base)
+          if (retry.error) throw retry.error
+          return key
+        }
+        throw error
+      }
       return key
     },
     onSuccess: (key) => {
@@ -65,7 +120,12 @@ export function McpKeysSection() {
       setReveal(true) // visible à la création pour pouvoir la copier ; masquée après rafraîchissement
       qc.invalidateQueries({ queryKey: ['mcp_cles'] })
     },
-    onError: () => toast.error('Impossible de créer la clé'),
+    onError: (e) =>
+      toast.error(
+        /portee|expire_le/i.test((e as Error).message)
+          ? 'Options indisponibles : exécutez d\'abord la migration 006_mcp_options.sql dans Supabase'
+          : 'Impossible de créer la clé',
+      ),
   })
 
   const revoke = useMutation({
@@ -93,9 +153,11 @@ export function McpKeysSection() {
         Accès ChatGPT (MCP)
       </h2>
       <p className="text-sm text-slate-500 mb-4">
-        Permet à ChatGPT de <strong>consulter</strong> vos clients, devis, factures et statistiques, et de{' '}
-        <strong>créer</strong> des clients, devis et factures (abonnement requis pour les documents).
-        Il peut modifier un devis non signé et gérer le catalogue (ajout, modification, suppression), mais jamais modifier une facture ni supprimer un client, un devis ou une facture. La clé ne donne accès qu'à votre compte et uniquement à cette fonction.
+        Permet à une IA (Claude, ChatGPT…) de <strong>consulter</strong> vos clients, devis, factures, statistiques et
+        rapports, et — avec une clé à droits complets — de <strong>créer</strong> clients, devis, factures et acomptes,
+        modifier un devis non signé ou un client, enregistrer un paiement, gérer le catalogue et envoyer un document au
+        client. Elle ne peut jamais modifier une facture émise ni supprimer un client, un devis ou une facture.
+        Une clé « lecture seule » ne peut rien écrire. Chaque clé ne donne accès qu'à votre compte, uniquement à cette fonction.
       </p>
 
       <div className="text-sm mb-4">
@@ -139,7 +201,7 @@ export function McpKeysSection() {
         </div>
       )}
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <input
           className="input flex-1"
           value={nom}
@@ -147,6 +209,15 @@ export function McpKeysSection() {
           placeholder="Nom de la clé"
           maxLength={50}
         />
+        <select className="input" value={portee} onChange={(e) => setPortee(e.target.value as Portee)} aria-label="Droits de la clé">
+          <option value="complet">Droits complets</option>
+          <option value="lecture">Lecture seule</option>
+        </select>
+        <select className="input" value={duree} onChange={(e) => setDuree(e.target.value)} aria-label="Durée de validité">
+          {DUREES.map((d) => (
+            <option key={d.value} value={d.value}>{d.label}</option>
+          ))}
+        </select>
         <button className="btn-primary" onClick={() => create.mutate()} disabled={create.isPending}>
           {create.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Créer une clé
         </button>
@@ -163,11 +234,19 @@ export function McpKeysSection() {
               <div>
                 <p className="font-medium text-slate-700">
                   {c.nom} <span className="text-slate-400 font-normal font-mono">· {c.prefixe}{MASK}</span>
+                  <span className="ml-2 text-xs font-normal rounded px-1.5 py-0.5 bg-slate-100 text-slate-600">
+                    {c.portee === 'lecture' ? 'Lecture seule' : 'Droits complets'}
+                  </span>
                 </p>
                 <p className="text-xs text-slate-400">
                   {c.derniere_utilisation
                     ? `Dernière utilisation : ${new Date(c.derniere_utilisation).toLocaleString('fr-FR')}`
                     : 'Jamais utilisée'}
+                  {c.expire_le && (
+                    joursRestants(c.expire_le) < 0
+                      ? <span className="text-red-600"> · Expirée</span>
+                      : <span className={joursRestants(c.expire_le) <= 7 ? 'text-amber-600' : ''}> · Expire dans {joursRestants(c.expire_le)} j</span>
+                  )}
                 </p>
               </div>
               <button
@@ -180,6 +259,21 @@ export function McpKeysSection() {
             </li>
           ))}
         </ul>
+      )}
+
+      {journal.length > 0 && (
+        <div className="mt-5 pt-4 border-t border-slate-100">
+          <h3 className="text-sm font-semibold text-slate-700 mb-2">Dernières actions de l'IA</h3>
+          <ul className="space-y-1">
+            {journal.map((j) => (
+              <li key={j.id} className="text-xs text-slate-500 flex gap-2">
+                <span className="shrink-0 text-slate-400">{new Date(j.created_at).toLocaleString('fr-FR')}</span>
+                <span className="font-mono text-slate-600 shrink-0">{j.outil}</span>
+                <span className="truncate">{j.resume}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   )

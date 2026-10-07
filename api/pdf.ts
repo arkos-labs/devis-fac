@@ -1,7 +1,7 @@
-// Téléchargement d'un PDF de devis via un lien temporaire signé (voir _pdf-link.ts),
-// émis par l'outil MCP telecharger_pdf_devis.
+// Téléchargement d'un PDF (devis ou facture) via un lien temporaire signé (voir _pdf-link.ts),
+// émis par les outils MCP telecharger_pdf_devis / telecharger_pdf_facture.
 import { createClient } from '@supabase/supabase-js'
-import { genererPdfDevis } from './_devis-pdf.js'
+import { genererPdfDocument } from './_documents-pdf.js'
 import { verifyPdfToken } from './_pdf-link.js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   if (!claims) return new Response('Lien invalide ou expiré.', { status: 403 })
 
   const db = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
-  const res = await genererPdfDevis(db, claims.userId, claims.devisId)
+  const res = await genererPdfDocument(db, claims.userId, claims.type, claims.docId)
   if (!res.ok) return new Response(res.erreur, { status: 404 })
 
   return new Response(res.bytes as BlobPart, {

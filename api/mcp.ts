@@ -9,89 +9,55 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
-import { genererPdfDevis } from './_devis-pdf.js'
-import { PDF_LINK_TTL_S, signPdfToken } from './_pdf-link.js'
+import {
+  CLIENT_COLS,
+  DEVIS_COLS,
+  FACTURE_COLS,
+  LIGNE_COLS,
+  NO_SUBSCRIPTION,
+  READ_ONLY,
+  SERVICE_ROLE_KEY,
+  SUPABASE_URL,
+  WRITE,
+  clientAppartient,
+  cleanSearch,
+  dateSchema,
+  fail,
+  insertLignes,
+  json,
+  ligneSchema,
+  limitSchema,
+  noteGoogle,
+  requireSubscription,
+  sha256Hex,
+} from './_common.js'
+import { enregistrerOutilsEtendus } from './_outils-etendus.js'
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+type Portee = 'lecture' | 'complet'
 
-const MAX_LIMIT = 50
-const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
-
-// Colonnes exposées (liste blanche) : jamais notes internes, prompt IA, IBAN, paramètres…
-const CLIENT_COLS = 'id, type_client, nom, nom_entreprise, email, telephone, adresse, ville, code_postal, dernier_contact'
-const DEVIS_COLS = 'id, numero, titre, statut, montant_ht, montant_total, date_creation, date_validite, notes_client'
-const FACTURE_COLS = 'id, numero, titre, statut, montant_ht, montant_total, date_creation, date_echeance, date_paiement, moyen_paiement, notes_client'
-const LIGNE_COLS = 'ordre, description, detail, quantite, unite, prix_unitaire, montant_ligne'
-
-const WRITE = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
-
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format attendu : AAAA-MM-JJ')
-const ligneSchema = z.object({
-  description: z.string().min(1).max(300),
-  detail: z.string().max(1000).optional(),
-  quantite: z.number().positive().max(100000).default(1),
-  unite: z.string().max(20).default('forfait'),
-  prix_unitaire: z.number().min(0).max(1000000),
-})
-type Ligne = z.infer<typeof ligneSchema>
-
-const limitSchema = z.number().int().min(1).max(MAX_LIMIT).default(20)
-
-function json(data: unknown) {
-  return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] }
-}
-
-function fail(message: string) {
-  return { isError: true, content: [{ type: 'text' as const, text: `Erreur : ${message}` }] }
-}
-
-// Retire les caractères qui casseraient un filtre PostgREST `.or(...)`.
-function cleanSearch(q: string) {
-  return q.replace(/[,()%*\\]/g, ' ').trim()
-}
-
-async function sha256Hex(value: string) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
-  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-// Même règle que l'application : créer des devis/factures nécessite un abonnement actif.
-async function requireSubscription(db: SupabaseClient, userId: string) {
-  const { data } = await db.from('subscriptions').select('status').eq('user_id', userId).maybeSingle()
-  return data?.status === 'active' || data?.status === 'trialing'
-}
-
-const NO_SUBSCRIPTION = 'Abonnement requis pour créer des devis ou factures.'
-
-async function clientAppartient(db: SupabaseClient, userId: string, clientId: string) {
-  const { data } = await db.from('clients').select('id').eq('id', clientId).eq('user_id', userId).maybeSingle()
-  return !!data
-}
-
-async function insertLignes(db: SupabaseClient, userId: string, type: 'devis' | 'facture', docId: string, lignes: Ligne[]) {
-  return db.from('lignes_prestation').insert(
-    lignes.map((l, i) => ({
-      user_id: userId,
-      document_type: type,
-      document_id: docId,
-      ordre: i,
-      description: l.description,
-      detail: l.detail ?? null,
-      quantite: l.quantite,
-      unite: l.unite,
-      prix_unitaire: l.prix_unitaire,
-    })),
-  )
-}
-
-async function noteGoogle(db: SupabaseClient, userId: string) {
-  const { data } = await db.from('parametres_compte').select('note_google, nombre_avis_google').eq('user_id', userId).maybeSingle()
-  return { note_google_snapshot: data?.note_google ?? null, nombre_avis_google_snapshot: data?.nombre_avis_google ?? null }
-}
-
-function buildServer(db: SupabaseClient, userId: string, origin: string) {
+function buildServer(db: SupabaseClient, userId: string, origin: string, cleId: string, portee: Portee) {
   const server = new McpServer({ name: 'crm-nettoyage', version: '1.0.0' })
+
+  // Portée de la clé et journal d'activité, appliqués à TOUS les outils déclarés ci-dessous :
+  // - clé « lecture » : seuls les outils en lecture seule (readOnlyHint) sont exposés ;
+  // - chaque outil d'écriture qui réussit est consigné dans mcp_journal (sans bloquer s'il est indisponible).
+  const declarer = server.registerTool.bind(server) as (...a: any[]) => unknown
+  ;(server as any).registerTool = (nom: string, config: any, handler: (...a: any[]) => Promise<any>) => {
+    const lecture = config?.annotations?.readOnlyHint === true
+    if (portee === 'lecture' && !lecture) return undefined
+    return declarer(nom, config, async (...args: any[]) => {
+      const res = await handler(...args)
+      if (!lecture && !res?.isError) {
+        const resume = JSON.stringify(args[0] && typeof args[0] === 'object' ? args[0] : {}).slice(0, 500)
+        try {
+          await db.from('mcp_journal').insert({ user_id: userId, cle_id: cleId, outil: nom, resume })
+        } catch {
+          /* journal indisponible : on n'empêche pas l'action */
+        }
+      }
+      return res
+    })
+  }
 
   server.registerTool(
     'rechercher_clients',
@@ -266,20 +232,6 @@ function buildServer(db: SupabaseClient, userId: string, origin: string) {
       if (error) return fail(error.message)
       const total = (data ?? []).reduce((s, f) => s + Number(f.montant_total), 0)
       return json({ total_a_encaisser: total, nombre: data?.length ?? 0, factures: data })
-    },
-  )
-
-  server.registerTool(
-    'statistiques',
-    {
-      title: 'Statistiques du tableau de bord',
-      description: "CA du mois et de l'année, CA à venir, taux d'acceptation des devis, factures en retard, nombre de clients.",
-      inputSchema: {},
-      annotations: READ_ONLY,
-    },
-    async () => {
-      const { data, error } = await db.rpc('mcp_dashboard_stats', { p_user_id: userId })
-      return error ? fail(error.message) : json(data)
     },
   )
 
@@ -523,61 +475,6 @@ function buildServer(db: SupabaseClient, userId: string, origin: string) {
   )
 
   server.registerTool(
-    'telecharger_pdf_devis',
-    {
-      title: "Obtenir le PDF d'un devis",
-      description:
-        "Génère le PDF d'un devis (identique à celui du bouton « Télécharger » du site : en-tête, lignes, mentions légales, signature électronique si présente). Renvoie le fichier en pièce jointe PDF (ressource encodée) ET un lien de téléchargement temporaire (valable 15 minutes). Accepte l'id ou le numéro du devis (ex. D-0002).",
-      inputSchema: { id_ou_numero: z.string().min(1).max(64) },
-      annotations: READ_ONLY,
-    },
-    async ({ id_ou_numero }) => {
-      let devisId = id_ou_numero
-      if (!z.string().uuid().safeParse(id_ou_numero).success) {
-        const { data, error } = await db
-          .from('devis')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('numero', id_ou_numero)
-          .maybeSingle()
-        if (error) return fail(error.message)
-        if (!data) return fail('Devis introuvable.')
-        devisId = data.id as string
-      }
-
-      const pdf = await genererPdfDevis(db, userId, devisId)
-      if (!pdf.ok) return fail(pdf.erreur)
-
-      const token = await signPdfToken(SERVICE_ROLE_KEY, userId, devisId)
-      const lien = `${origin}/api/pdf?t=${token}`
-      const base64 = Buffer.from(pdf.bytes).toString('base64')
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: JSON.stringify(
-              {
-                devis: pdf.numero,
-                fichier: pdf.filename,
-                taille_octets: pdf.bytes.length,
-                lien_telechargement: lien,
-                lien_valable_minutes: PDF_LINK_TTL_S / 60,
-                note: 'Le PDF est aussi joint à cette réponse. Le lien est secret : ne le partager qu\'avec le destinataire voulu.',
-              },
-              null,
-              2,
-            ),
-          },
-          {
-            type: 'resource' as const,
-            resource: { uri: `devis://${pdf.filename}`, mimeType: 'application/pdf', blob: base64 },
-          },
-        ],
-      }
-    },
-  )
-
-  server.registerTool(
     'modifier_devis',
     {
       title: 'Modifier un devis',
@@ -695,22 +592,7 @@ function buildServer(db: SupabaseClient, userId: string, origin: string) {
     },
   )
 
-  server.registerTool(
-    'convertir_devis_en_facture',
-    {
-      title: 'Convertir un devis en facture',
-      description: "Crée la facture d'un devis au statut « accepté » (échéance à 30 jours) ; le devis passe alors au statut « facture ». Un devis en attente, refusé ou déjà facturé ne peut pas être converti.",
-      inputSchema: { devis_id: z.string().uuid() },
-      annotations: WRITE,
-    },
-    async ({ devis_id }) => {
-      if (!(await requireSubscription(db, userId))) return fail(NO_SUBSCRIPTION)
-      const { data, error } = await db.rpc('mcp_convertir_devis_en_facture', { p_devis_id: devis_id, p_user_id: userId })
-      if (error) return fail(error.message)
-      const { data: f } = await db.from('factures').select('id, numero, montant_total').eq('id', data as string).eq('user_id', userId).maybeSingle()
-      return json({ cree: true, facture: f })
-    },
-  )
+  enregistrerOutilsEtendus({ server, db, userId, origin })
 
   return server
 }
@@ -744,22 +626,29 @@ async function handle(req: Request): Promise<Response> {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  const { data: cle, error } = await db
+  const hash = await sha256Hex(token)
+  let { data: cle, error } = await db
     .from('mcp_cles')
-    .select('id, user_id')
-    .eq('cle_hash', await sha256Hex(token))
+    .select('id, user_id, portee, expire_le')
+    .eq('cle_hash', hash)
     .maybeSingle()
+  // Migration 006 pas encore exécutée (colonnes portee / expire_le absentes) : comportement d'avant
+  if (error && /portee|expire_le/i.test(error.message)) {
+    ;({ data: cle, error } = await db.from('mcp_cles').select('id, user_id').eq('cle_hash', hash).maybeSingle())
+  }
   // Erreur de base (migration non exécutée, mauvaise clé service_role…) ≠ clé inconnue
   if (error) {
     console.error('MCP: lecture mcp_cles impossible', error.message)
     return new Response(`Erreur serveur MCP : ${error.message}`, { status: 500 })
   }
   if (!cle) return unauthorized('Clé inconnue ou révoquée.')
+  if (cle.expire_le && new Date(cle.expire_le) < new Date()) return unauthorized('Clé expirée : en créer une nouvelle dans Paramètres.')
 
   // Trace d'utilisation (sans bloquer la réponse en cas d'échec)
   await db.from('mcp_cles').update({ derniere_utilisation: new Date().toISOString() }).eq('id', cle.id)
 
-  const server = buildServer(db, cle.user_id as string, new URL(req.url).origin)
+  const portee: Portee = cle.portee === 'lecture' ? 'lecture' : 'complet'
+  const server = buildServer(db, cle.user_id as string, new URL(req.url).origin, cle.id as string, portee)
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // sans état : une instance par requête
     enableJsonResponse: true,

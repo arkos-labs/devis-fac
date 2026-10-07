@@ -3,7 +3,7 @@
 // Norme utilisée pour la facturation électronique française.
 // Référence : FNFE-MPE / Factur-X 1.0.7, profil BASIC.
 // ============================================================
-import type { Facture, LignePrestation, Client, ParametresCompte } from '@/types/database'
+import type { Facture, LignePrestation, Client, ParametresCompte } from '../types/database'
 
 function esc(value: string | null | undefined): string {
   if (!value) return ''

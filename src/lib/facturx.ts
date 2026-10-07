@@ -4,9 +4,9 @@
 // (profil BASIC EN16931) comme pièce jointe conforme PDF/A-3.
 // ============================================================
 import { PDFDocument, AFRelationship } from 'pdf-lib'
-import type { Devis, Facture, LignePrestation, Client, ParametresCompte } from '@/types/database'
-import { generateDocumentPdf } from '@/lib/pdf-generator'
-import { generateFacturXXml } from '@/lib/facturx-xml'
+import type { Devis, Facture, LignePrestation, Client, ParametresCompte } from '../types/database'
+import { generateDocumentPdf } from './pdf-generator.js'
+import { generateFacturXXml } from './facturx-xml.js'
 
 export interface GenerateInput {
   document: Devis | Facture
